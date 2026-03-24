@@ -150,7 +150,7 @@ export default function App() {
               <Heart className="text-rose-300 mb-3 w-8 h-8" strokeWidth={1} />
               <h2 className="text-2xl md:text-3xl font-serif text-stone-700 mb-2">{noiva} & {noivo}</h2>
               <div className="w-12 h-px bg-rose-200 my-3"></div>
-              <p className="text-[10px] md:text-xs tracking-[0.2em] uppercase text-stone-400">20 de Outubro de 2026</p>
+              <p className="text-[10px] md:text-xs tracking-[0.2em] uppercase text-stone-400">24 de Outubro de 2026</p>
             </div>
 
             {/* Abas do Envelope (Laterais e Fundo) */}
@@ -206,7 +206,7 @@ export default function App() {
           <div className="w-24 h-[1px] bg-rose-300 mb-12"></div>
           
           <p className="text-2xl md:text-3xl text-stone-600 font-serif italic mb-2">
-            15 de Novembro de 2026
+            24 de Outubro de 2026
           </p>
           
           <div className="absolute bottom-10 animate-bounce cursor-pointer text-stone-400 hover:text-rose-400 transition-colors">

@@ -7,4 +7,7 @@ export default defineConfig({
     react(),
     tailwindcss(), // <-- Adicione esta linha
   ],
+  optimizeDeps: {
+    include: ['lucide-react'], // Diz para o Vite compilar isso de forma otimizada
+  },
 })

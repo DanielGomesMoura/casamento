@@ -1,84 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, MapPin, Calendar, Clock, ChevronDown, Send, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Heart, MapPin, Calendar, Clock, CheckCircle2, XCircle, Menu, X, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase.config'; // Ajuste o caminho se necessário
+
+// ADICIONE AS INTERFACES DO BANCO:
+interface Convidado {
+  nome: string;
+  confirmado: boolean;
+}
+
+interface ConviteData {
+  id: string;
+  familia: string;
+  categoria: string;
+  qtdPessoas: number;
+  qtdConfirmados: number;
+  convidados: Convidado[];
+}
+
+// ==========================================
+// CONFIGURAÇÕES DO CASAMENTO (Altere aqui)
+// ==========================================
+const WEDDING_DATE = new Date("2026-10-24T16:00:00");
+const BRIDE_NAME = "Ana";
+const GROOM_NAME = "Daniel";
+
+const SLIDER_IMAGES = [
+  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2069&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=2070&auto=format&fit=crop"
+];
+
+// Slides da Tela "Nossa História"
+const STORY_SLIDES = [
+  {
+    image: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=2070&auto=format&fit=crop",
+    text: "Tudo começou com um sorriso inesperado, e de repente...",
+    date: "O Início"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?q=80&w=2070&auto=format&fit=crop",
+    text: "Cada momento ao teu lado transformou-se na minha memória favorita.",
+    date: "A Jornada"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=2070&auto=format&fit=crop",
+    text: "E agora, estamos prestes a escrever o nosso 'Para Sempre'.",
+    date: "O Futuro"
+  }
+];
+
+// ==========================================
+// COMPONENTES PRINCIPAIS
+// ==========================================
 
 export default function App() {
-  // Estado para controlar a animação do envelope
-  const [envelopeState, setEnvelopeState] = useState<'closed' | 'opening' | 'opened'>('closed');
-  
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-  const [isRsvpOpen, setIsRsvpOpen] = useState(false);
-  const [rsvpName, setRsvpName] = useState('');
-  const [rsvpGuests, setRsvpGuests] = useState('1');
-  const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
+  const [isEnvelopeOpen, setIsEnvelopeOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  // Nomes dos noivos
-  const noivo = "Daniel";
-  const noiva = "Ana Beatriz";
-  const nomeCompletoNoivo = "Daniel Gomes Moura";
-  const nomeCompletoNoiva = "Ana Beatriz Pereira dos Santos";
-  
-  // Data do casamento
-  const dataCasamento = new Date('2026-10-20T16:00:00');
-
-  // Lógica do contador
+  // Efeito para mudar a cor do menu ao rolar a página
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = dataCasamento.getTime() - now;
-
-      if (distance < 0) {
-        clearInterval(timer);
-        return;
-      }
-
-      setTimeLeft({
-        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((distance % (1000 * 60)) / 1000),
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Bloqueia o scroll da página enquanto o envelope não for aberto
-  useEffect(() => {
-    if (envelopeState !== 'opened') {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [envelopeState]);
-
-  // Função que dispara a animação de abrir o envelope
-  const handleOpenEnvelope = () => {
-    setEnvelopeState('opening');
-    // Espera a animação terminar (2.5 segundos) para sumir com o envelope da tela
-    setTimeout(() => {
-      setEnvelopeState('opened');
-    }, 2500);
+  const navigateTo = (page: string) => {
+    setCurrentPage(page);
+    setIsMenuOpen(false);
+    window.scrollTo(0, 0);
   };
 
-  const handleRsvpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setRsvpSubmitted(true);
-    setTimeout(() => {
-      setIsRsvpOpen(false);
-      setRsvpSubmitted(false);
-      setRsvpName('');
-      setRsvpGuests('1');
-    }, 3000);
-  };
+  const navLinks = [
+    { id: 'home', label: 'O Casamento' },
+    { id: 'historia', label: 'Nossa História' },
+    { id: 'padrinhos', label: 'Para Padrinhos' },
+    { id: 'convidados', label: 'Para Convidados' },
+  ];
+
+  // Lógica para saber se o Header deve ser transparente ou branco
+  const isImmersivePage = currentPage === 'home' || currentPage === 'historia';
+  const isHeaderWhite = scrolled || !isImmersivePage;
 
   return (
     <>
+      {/* INJEÇÃO DE ESTILOS GLOBAIS (Fontes + Animações do Site e Envelope) */}
       <style>
         {`
           @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
@@ -86,12 +97,23 @@ export default function App() {
           .font-serif { font-family: 'Playfair Display', serif; }
           .font-sans { font-family: 'Montserrat', sans-serif; }
           
-          .bg-texture {
-            background-color: #fdfbf7;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='#e7e5e4' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+          /* Animações do site principal */
+          @keyframes slow-zoom {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+          }
+          @keyframes fade-in {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          .animate-slow-zoom {
+            animation: slow-zoom 20s linear infinite alternate;
+          }
+          .animate-fade-in {
+            animation: fade-in 0.8s ease-out forwards;
           }
 
-          /* --- ANIMAÇÕES DO ENVELOPE --- */
+          /* --- Animações do Envelope --- */
           .perspective-container {
             perspective: 1200px;
           }
@@ -133,251 +155,829 @@ export default function App() {
             opacity: 0;
             pointer-events: none;
           }
+
+          /* --- Animação do Livro (Nossa História) --- */
+          .book-container {
+            perspective: 1500px;
+          }
+          .book-page {
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+          }
+          .book-page.flipped {
+            transform: rotateY(-180deg);
+          }
+          .backface-hidden {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+          }
+          .rotate-y-180 {
+            transform: rotateY(180deg);
+          }
         `}
       </style>
 
-      {/* --- TELA DE ABERTURA (ENVELOPE) --- */}
-      {envelopeState !== 'opened' && (
-        <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-100/95 backdrop-blur-md overlay-fade ${envelopeState === 'opening' ? 'open' : ''}`}>
-          
-          <div className="relative w-[90vw] max-w-[450px] aspect-[4/3] perspective-container drop-shadow-2xl">
-            
-            {/* Fundo interno do envelope (mais escuro) */}
-            <div className="absolute inset-0 bg-[#dcd6d0] rounded-lg"></div>
-
-            {/* O Convite (Cartão Branco) que desliza para cima */}
-            <div className={`absolute left-4 right-4 top-4 bottom-4 bg-white rounded-md shadow-md flex flex-col items-center justify-center p-6 text-center letter-content ${envelopeState === 'opening' ? 'slide-up' : ''}`}>
-              <Heart className="text-rose-300 mb-3 w-8 h-8" strokeWidth={1} />
-              <h2 className="text-2xl md:text-3xl font-serif text-stone-700 mb-2">{noiva} & {noivo}</h2>
-              <div className="w-12 h-px bg-rose-200 my-3"></div>
-              <p className="text-[10px] md:text-xs tracking-[0.2em] uppercase text-stone-400">24 de Outubro de 2026</p>
-            </div>
-
-            {/* Abas do Envelope (Laterais e Fundo) */}
-            <div className="absolute inset-0 bg-[#e6e0da] rounded-lg envelope-left shadow-[2px_0_5px_rgba(0,0,0,0.02)]"></div>
-            <div className="absolute inset-0 bg-[#e6e0da] rounded-lg envelope-right shadow-[-2px_0_5px_rgba(0,0,0,0.02)]"></div>
-            <div className="absolute inset-0 bg-[#f0ece7] rounded-lg envelope-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.03)]"></div>
-
-            {/* Aba Superior (Que abre) */}
-            <div className={`absolute inset-0 bg-[#ebe6e1] rounded-lg envelope-top shadow-[0_2px_10px_rgba(0,0,0,0.05)] ${envelopeState === 'opening' ? 'open' : ''}`}></div>
-
-            {/* Selo de Cera / Botão de Abrir */}
-            <button 
-              onClick={handleOpenEnvelope}
-              disabled={envelopeState !== 'closed'}
-              className={`absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-rose-400 rounded-full text-white flex items-center justify-center shadow-lg hover:scale-110 hover:bg-rose-500 hover:shadow-rose-400/50 transition-all duration-300 z-50 border-2 border-rose-300/50 cursor-pointer ${envelopeState === 'opening' ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
-            >
-              <div className="absolute inset-1 border border-rose-300/30 rounded-full"></div>
-              <span className="font-serif italic text-2xl font-medium tracking-wide">A<span className="text-xl">&</span>D</span>
-            </button>
-
-          </div>
-          
-          {/* Texto de incentivo */}
-          <div className={`mt-16 text-stone-500 font-serif italic text-xl transition-opacity duration-500 ${envelopeState === 'opening' ? 'opacity-0' : 'opacity-100'}`}>
-            Tem um convite para ti...
-          </div>
-        </div>
+      {/* Renderiza o envelope se não estiver aberto */}
+      {!isEnvelopeOpen && (
+        <EnvelopeScreen onOpenComplete={() => setIsEnvelopeOpen(true)} />
       )}
 
-      {/* --- CONTEÚDO PRINCIPAL DO SITE --- */}
-      <div className={`min-h-screen bg-texture text-stone-800 font-sans selection:bg-rose-200 ${envelopeState !== 'opened' ? 'h-screen overflow-hidden' : ''}`}>
+      {/* Renderiza o site após a abertura do envelope */}
+      {isEnvelopeOpen && (
+        <div className="min-h-screen bg-stone-50 font-sans text-stone-800">
+          {/* HEADER / NAVEGAÇÃO */}
+          <nav className={`fixed w-full z-50 transition-all duration-300 ${isHeaderWhite ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'}`}>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center">
+                {/* Logo / Nomes */}
+                <div 
+                  className={`font-serif text-2xl cursor-pointer flex flex-col md:flex-row items-center md:gap-2 leading-none md:leading-normal transition-colors ${isHeaderWhite ? 'text-stone-800' : 'text-white drop-shadow-md'}`}
+                  onClick={() => navigateTo('home')}
+                >
+                  <span>{BRIDE_NAME}</span>
+                  <span className="text-xl md:text-2xl mt-1 md:mt-0">&</span>
+                  <span>{GROOM_NAME}</span>
+                </div>
+
+                {/* Menu Desktop */}
+                <div className="hidden md:flex space-x-6 lg:space-x-8">
+                  {navLinks.map((link) => (
+                    <button
+                      key={link.id}
+                      onClick={() => navigateTo(link.id)}
+                      className={`uppercase tracking-widest text-[10px] lg:text-xs font-medium transition-colors ${
+                        isHeaderWhite 
+                          ? (currentPage === link.id ? 'text-stone-900 border-b-2 border-stone-900' : 'text-stone-500 hover:text-stone-900')
+                          : (currentPage === link.id ? 'text-white border-b-2 border-white drop-shadow-md' : 'text-white/80 hover:text-white drop-shadow-md')
+                      }`}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Menu Mobile Toggle */}
+                <div className="md:hidden">
+                  <button 
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className={`${isHeaderWhite || isMenuOpen ? 'text-stone-800' : 'text-white drop-shadow-md'}`}
+                  >
+                    {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Menu Mobile Dropdown */}
+            {isMenuOpen && (
+              <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg py-4 flex flex-col items-center space-y-4 border-t border-stone-100">
+                {navLinks.map((link) => (
+                  <button
+                    key={link.id}
+                    onClick={() => navigateTo(link.id)}
+                    className={`uppercase tracking-widest text-sm w-full py-2 text-center ${
+                      currentPage === link.id ? 'text-stone-900 font-bold bg-stone-50' : 'text-stone-600'
+                    }`}
+                  >
+                    {link.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </nav>
+
+          {/* ROTEAMENTO SIMPLES */}
+          <main className="min-h-screen">
+            {currentPage === 'home' && <HomeScreen />}
+            {currentPage === 'historia' && <HistoriaScreen />}
+            {currentPage === 'padrinhos' && <PadrinhosScreen />}
+            {currentPage === 'convidados' && <ConvidadosScreen />}
+          </main>
+
+          {/* FOOTER */}
+          <footer className="bg-stone-900 text-stone-300 py-12 text-center">
+            <div className="max-w-4xl mx-auto px-4">
+              <Heart className="mx-auto mb-4 text-rose-400" size={24} />
+              <h2 className="font-serif text-2xl mb-2">{BRIDE_NAME} & {GROOM_NAME}</h2>
+              <p className="text-sm tracking-widest uppercase mb-6">Com amor, esperamos por você.</p>
+              <p className="text-xs text-stone-500">© {new Date().getFullYear()} - Convite Digital Profissional</p>
+            </div>
+          </footer>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ==========================================
+// TELA 4: ENVELOPE DO CLIENTE
+// ==========================================
+function EnvelopeScreen({ onOpenComplete }: { onOpenComplete: () => void }) {
+  const [envelopeState, setEnvelopeState] = useState('closed');
+
+  const handleOpenEnvelope = () => {
+    if (envelopeState !== 'closed') return;
+    setEnvelopeState('opening');
+    
+    // Espera a animação terminar (2.5 segundos) para sumir com o envelope e mostrar o site
+    setTimeout(() => {
+      onOpenComplete();
+    }, 2500);
+  };
+
+  return (
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-stone-100/95 backdrop-blur-md overlay-fade ${envelopeState === 'opening' ? 'open' : ''}`}>
+      
+      <div className="relative w-[90vw] max-w-112.5 aspect-4/3 perspective-container drop-shadow-2xl">
         
-        {/* --- HERO SECTION --- */}
-        <header className="relative flex flex-col items-center justify-center min-h-screen p-6 text-center bg-white/80 backdrop-blur-sm border-b border-stone-200">
-          <div className="absolute top-10 w-full flex justify-center">
-             <Heart className="text-rose-200 w-8 h-8 animate-pulse" strokeWidth={1.5} />
-          </div>
+        {/* Fundo interno do envelope (mais escuro) */}
+        <div className="absolute inset-0 bg-[#dcd6d0] rounded-lg"></div>
 
-          <span className="text-xs md:text-sm tracking-[0.4em] uppercase text-rose-400 mb-8 font-medium">
-            Com a bênção de Deus e de nossos pais
-          </span>
+        {/* O Convite (Cartão Branco) que desliza para cima */}
+        <div className={`absolute left-4 right-4 top-4 bottom-4 bg-white rounded-md shadow-md flex flex-col items-center justify-center p-6 text-center letter-content ${envelopeState === 'opening' ? 'slide-up' : ''}`}>
+          <Heart className="text-rose-300 mb-3 w-8 h-8" strokeWidth={1} />
+          <h2 className="text-2xl md:text-3xl font-serif text-stone-700 mb-2">{BRIDE_NAME} & {GROOM_NAME}</h2>
+          <div className="w-12 h-px bg-rose-200 my-3"></div>
+          <p className="text-[10px] md:text-xs tracking-[0.2em] uppercase text-stone-400">24 de Outubro de 2026</p>
+        </div>
+
+        {/* Abas do Envelope (Laterais e Fundo) */}
+        <div className="absolute inset-0 bg-[#e6e0da] rounded-lg envelope-left shadow-[2px_0_5px_rgba(0,0,0,0.02)]"></div>
+        <div className="absolute inset-0 bg-[#e6e0da] rounded-lg envelope-right shadow-[-2px_0_5px_rgba(0,0,0,0.02)]"></div>
+        <div className="absolute inset-0 bg-[#f0ece7] rounded-lg envelope-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.03)]"></div>
+
+        {/* Aba Superior (Que abre) */}
+        <div className={`absolute inset-0 bg-[#ebe6e1] rounded-lg envelope-top shadow-[0_2px_10px_rgba(0,0,0,0.05)] ${envelopeState === 'opening' ? 'open' : ''}`}></div>
+
+        {/* Selo de Cera / Botão de Abrir COM A LOGO NOVA */}
+        <button 
+          onClick={handleOpenEnvelope}
+          disabled={envelopeState !== 'closed'}
+          className={`absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all duration-300 z-50 border border-stone-200 cursor-pointer ${envelopeState === 'opening' ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        >
+          {/* ========================================================================= */}
+          {/* O `scale-[1.8]` faz a imagem vazar para fora do botão branco              */}
+          {/* ========================================================================= */}
+          <img 
+            src="./logo_envelope.png" 
+            alt="Logo D&A"
+            className="w-full h-full object-contain drop-shadow-md scale-[1.8]"
+          />
+        </button>
+
+      </div>
+      
+      {/* Texto de incentivo */}
+      <div className={`mt-16 text-stone-500 font-serif italic text-xl transition-opacity duration-500 ${envelopeState === 'opening' ? 'opacity-0' : 'opacity-100'}`}>
+        Tem um convite para ti...
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// NOVA TELA: NOSSA HISTÓRIA (Livro / Swipe)
+// ==========================================
+function HistoriaScreen() {
+  const [activePage, setActivePage] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const nextPage = () => {
+    if (activePage < STORY_SLIDES.length - 1) setActivePage(p => p + 1);
+  };
+
+  const prevPage = () => {
+    if (activePage > 0) setActivePage(p => p - 1);
+  };
+
+  // Funções para detectar o Swipe (Arrastar) no telemóvel
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) nextPage();
+    if (isRightSwipe) prevPage();
+  };
+
+  return (
+    <div className="relative h-screen bg-stone-900 overflow-hidden font-sans flex flex-col items-center justify-center">
+      
+      {/* Background Desfocado e Imersivo */}
+      <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out">
+         <img 
+           src={STORY_SLIDES[activePage].image} 
+           alt="Background" 
+           className="w-full h-full object-cover opacity-40 blur-xl scale-110" 
+         />
+      </div>
+
+      <div className="relative z-20 w-full flex flex-col items-center pt-16">
+        <h1 className="text-white font-serif text-4xl md:text-5xl mb-8 drop-shadow-lg text-center">Nossa História</h1>
+
+        {/* O Álbum / Livro */}
+        <div 
+          className="book-container relative w-[85vw] max-w-[400px] aspect-[3/4]"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+           {/* Capa de trás (Base do livro) */}
+           <div className="absolute inset-0 bg-[#e0dcd3] rounded-r-2xl rounded-l-md shadow-2xl translate-x-1 translate-y-1 md:translate-x-2 md:translate-y-2 border border-stone-300"></div>
+
+           {/* Mapeando todas as páginas do livro */}
+           {STORY_SLIDES.map((slide, index) => {
+             const isFlipped = index < activePage; // Se a página for menor que a atual, ela foi virada para a esquerda
+             
+             return (
+               <div
+                 key={index}
+                 className={`book-page absolute inset-0 bg-[#fdfbf7] rounded-r-2xl rounded-l-md shadow-[-5px_0_15px_rgba(0,0,0,0.15)] border-l-4 border-stone-300/50 flex flex-col ${isFlipped ? 'flipped' : ''}`}
+                 style={{ zIndex: STORY_SLIDES.length - index }}
+               >
+                  {/* FRENTE DA PÁGINA */}
+                  <div className="absolute inset-0 p-4 md:p-6 flex flex-col backface-hidden">
+                     {/* Foto (Polaroid style) */}
+                     <div className="w-full h-[55%] overflow-hidden rounded-xl shadow-inner mb-6 relative bg-stone-200">
+                        {/* pointer-events-none previne que a imagem interfira no gesto de arrastar no telemóvel */}
+                        <img src={slide.image} alt="Momento" className="w-full h-full object-cover pointer-events-none" />
+                     </div>
+                     
+                     {/* Texto */}
+                     <div className="flex-1 flex flex-col items-center justify-center text-center">
+                        <p className="font-serif italic text-rose-400 mb-3 text-sm">{slide.date}</p>
+                        <h2 className="font-serif text-xl md:text-2xl text-stone-800 leading-snug px-2">
+                          {slide.text}
+                        </h2>
+                     </div>
+                     
+                     {/* Numeração da Página */}
+                     <div className="absolute bottom-4 right-6 text-stone-400 font-serif italic text-xs">
+                        {index + 1} / {STORY_SLIDES.length}
+                     </div>
+                  </div>
+
+                  {/* VERSO DA PÁGINA (Visível quando virada para a esquerda) */}
+                  <div className="absolute inset-0 bg-[#f4f1ea] rounded-l-2xl rounded-r-md backface-hidden rotate-y-180 border-r-4 border-stone-300/50 flex items-center justify-center">
+                     <Heart size={48} className="text-stone-300 opacity-30" />
+                  </div>
+               </div>
+             )
+           })}
+        </div>
+
+        {/* Controles (Botões visíveis em desktop, mas também funcionam no telemóvel) */}
+        <div className="flex items-center gap-6 mt-10 z-20">
+           <button 
+             onClick={prevPage} 
+             disabled={activePage === 0} 
+             className={`p-3 rounded-full bg-white/20 backdrop-blur-md text-white transition-all ${activePage === 0 ? 'opacity-30 cursor-not-allowed' : 'opacity-100 hover:bg-white/30 hover:scale-110 shadow-lg'}`}
+           >
+             <ChevronLeft size={24} />
+           </button>
+           
+           <span className="text-white/80 text-xs tracking-widest uppercase animate-pulse">
+             Deslize a página
+           </span>
+           
+           <button 
+             onClick={nextPage} 
+             disabled={activePage === STORY_SLIDES.length - 1} 
+             className={`p-3 rounded-full bg-white/20 backdrop-blur-md text-white transition-all ${activePage === STORY_SLIDES.length - 1 ? 'opacity-30 cursor-not-allowed' : 'opacity-100 hover:bg-white/30 hover:scale-110 shadow-lg'}`}
+           >
+             <ChevronRight size={24} />
+           </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// TELA 1: INÍCIO (Convite, Timer, RSVP, Mapas)
+// ==========================================
+function HomeScreen() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Efeito do Slider de Imagens
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDER_IMAGES.length);
+    }, 5000); // Troca a imagem a cada 5 segundos
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="animate-fade-in font-sans">
+      {/* HERO SECTION (Slider + Título + Timer) */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Images */}
+        {SLIDER_IMAGES.map((img, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div className="absolute inset-0 bg-black/40 z-10" /> {/* Overlay escuro */}
+            <img src={img} alt={`Casamento ${index}`} className="object-cover w-full h-full animate-slow-zoom" />
+          </div>
+        ))}
+
+        {/* Hero Content */}
+        <div className="relative z-20 text-center text-white px-4 mt-16">
+          <p className="tracking-[0.3em] uppercase text-sm md:text-base mb-4 drop-shadow-md">Vamos nos casar!</p>
           
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-serif text-stone-700 mb-6 leading-tight flex flex-col md:flex-row items-center gap-4">
-            <span className="drop-shadow-sm">{noiva}</span>
-            <span className="text-rose-300 italic text-5xl md:text-7xl lg:text-8xl mx-4 font-light">&amp;</span>
-            <span className="drop-shadow-sm">{noivo}</span>
+          <h1 className="font-serif text-6xl lg:text-8xl xl:text-9xl mb-6 drop-shadow-lg flex flex-col min-[1550px]:flex-row justify-center items-center gap-2 min-[1550px]:gap-6">
+            <span>{BRIDE_NAME}</span>
+            <span className="text-rose-300 italic">&</span>
+            <span>{GROOM_NAME}</span>
           </h1>
-          
-          <p className="text-lg md:text-xl font-light text-stone-500 mb-12 max-w-2xl leading-relaxed mt-4">
-            Temos a imensa alegria de convidar-vos para celebrar o início da nossa nova vida juntos.
-          </p>
-          
-          <div className="w-24 h-[1px] bg-rose-300 mb-12"></div>
-          
-          <p className="text-2xl md:text-3xl text-stone-600 font-serif italic mb-2">
-            24 de Outubro de 2026
-          </p>
-          
-          <div className="absolute bottom-10 animate-bounce cursor-pointer text-stone-400 hover:text-rose-400 transition-colors">
-             <ChevronDown size={32} strokeWidth={1} />
-          </div>
-        </header>
 
-        {/* --- CONTADOR --- */}
-        <section className="py-16 bg-rose-50/50 border-y border-rose-100">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-sm tracking-[0.3em] uppercase text-rose-400 mb-10 font-semibold">Contagem Decrescente</h2>
-            <div className="flex flex-wrap justify-center gap-4 md:gap-8">
-              {[
-                { label: 'Dias', value: timeLeft.days },
-                { label: 'Horas', value: timeLeft.hours },
-                { label: 'Minutos', value: timeLeft.minutes },
-                { label: 'Segundos', value: timeLeft.seconds },
-              ].map((item, index) => (
-                <div key={index} className="flex flex-col items-center bg-white p-6 rounded-full w-28 h-28 md:w-32 md:h-32 justify-center shadow-sm border border-stone-100">
-                  <span className="text-3xl md:text-4xl font-serif text-stone-700 mb-1">{item.value}</span>
-                  <span className="text-xs uppercase tracking-wider text-rose-400">{item.label}</span>
+          <p className="text-xl lg:text-2xl font-serif italic mb-12 drop-shadow-md">24 de Outubro de 2026</p>
+          
+          <Countdown targetDate={WEDDING_DATE} />
+        </div>
+        
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-20 animate-bounce">
+          <div className="w-8 h-12 rounded-full border-2 border-white flex items-start justify-center p-2">
+            <div className="w-1 h-3 bg-white rounded-full" />
+          </div>
+        </div>
+      </section>
+
+      {/* SEÇÃO RSVP (Confirmação) */}
+      <section className="py-20 px-4 bg-stone-100">
+        <div className="max-w-3xl mx-auto text-center mb-12">
+          <h2 className="font-serif text-4xl mb-4 text-stone-800">Confirme sua Presença</h2>
+          <p className="text-stone-600">Por favor, confirme sua presença até o dia 15 de Outubro de 2026. Sua resposta é muito importante para nossa organização.</p>
+        </div>
+        <RSVPForm />
+      </section>
+
+      {/* SEÇÃO MAPAS (Localização) */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="font-serif text-4xl mb-16 text-center text-stone-800">Localização</h2>
+          
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Cerimônia */}
+            <div className="bg-stone-50 rounded-xl overflow-hidden shadow-lg border border-stone-100 flex flex-col">
+              <div className="p-8 text-center grow">
+                <Heart className="mx-auto text-rose-400 mb-4" size={32} />
+                <h3 className="font-serif text-2xl mb-2">Cerimônia Religiosa</h3>
+                <p className="text-stone-500 mb-4 font-medium">Paróquia Menino Jesus de Praga</p>
+                <div className="flex items-start justify-center text-stone-600 mb-2">
+                  <MapPin className="mr-2 shrink-0 mt-1" size={18} />
+                  <p className="text-sm">Praça Central, 123 - Centro<br/>Cidade Nova, Estado</p>
+                </div>
+                <div className="flex items-center justify-center text-stone-600">
+                  <Clock className="mr-2" size={18} />
+                  <p className="text-sm">Início pontualmente às 16:00</p>
+                </div>
+              </div>
+              <div className="h-64 w-full bg-gray-200">
+                {/* Embed do Google Maps */}
+                <iframe 
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.1486455113945!2d-46.65342418447571!3d-23.563090784682054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce59c8da0aa315%3A0xd59f9431f2c9776a!2sAv.%20Paulista%2C%20S%C3%A3o%20Paulo%20-%20SP!5e0!3m2!1spt-BR!2sbr!4v1680000000000!5m2!1spt-BR!2sbr" 
+                  width="100%" 
+                  height="100%" 
+                  style={{ border: 0 }} 
+                  allowFullScreen
+                  loading="lazy" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Mapa da Igreja"
+                ></iframe>
+              </div>
+            </div>
+
+            {/* Recepção */}
+            <div className="bg-stone-50 rounded-xl overflow-hidden shadow-lg border border-stone-100 flex flex-col">
+              <div className="p-8 text-center grow">
+                <Calendar className="mx-auto text-rose-400 mb-4" size={32} />
+                <h3 className="font-serif text-2xl mb-2">Recepção & Festa</h3>
+                <p className="text-stone-500 mb-4 font-medium">Espaço das Águas Figueira</p>
+                <div className="flex items-start justify-center text-stone-600 mb-2">
+                  <MapPin className="mr-2 shrink-0 mt-1" size={18} />
+                  <p className="text-sm">Rodovia do Sol, Km 15 - Zona Rural<br/>Cidade Nova, Estado</p>
+                </div>
+                <div className="flex items-center justify-center text-stone-600">
+                  <Clock className="mr-2" size={18} />
+                  <p className="text-sm">Logo após a cerimônia</p>
+                </div>
+              </div>
+              <div className="h-64 w-full bg-gray-200">
+                {/* Embed do Google Maps */}
+                <iframe 
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3656.405786636757!2d-46.68069368447502!3d-23.58784968466986!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce574488820f4f%3A0x67397753ebbaab23!2sParque%20Ibirapuera!5e0!3m2!1spt-BR!2sbr!4v1680000000000!5m2!1spt-BR!2sbr" 
+                  width="100%" 
+                  height="100%" 
+                  style={{ border: 0 }} 
+                  allowFullScreen
+                  loading="lazy" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Mapa da Festa"
+                ></iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ==========================================
+// TELA 2: MANUAL DOS PADRINHOS
+// ==========================================
+function PadrinhosScreen() {
+  return (
+    <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-16 mt-8">
+          <h1 className="font-serif text-5xl mb-4 text-stone-800">Manual dos Padrinhos</h1>
+          <p className="text-stone-600 max-w-2xl mx-auto">
+            Vocês foram escolhidos a dedo para estarem ao nosso lado no dia mais importante de nossas vidas. Aqui estão algumas informações para brilharem junto conosco!
+          </p>
+        </div>
+
+        {/* Madrinhas */}
+        <div className="bg-white rounded-3xl shadow-sm border border-stone-200 p-8 md:p-12 mb-12">
+          <h2 className="font-serif text-3xl mb-8 text-center text-rose-500 border-b border-stone-100 pb-4">Para as Madrinhas</h2>
+          
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h3 className="text-2xl font-medium mb-4 font-serif text-stone-800">O Vestido</h3>
+              <p className="text-stone-600 leading-relaxed mb-8">
+                Para mantermos a harmonia nas fotos, escolhemos a paleta de tons <strong>Fúcsia, Purple e Pink</strong>. O modelo do vestido é de livre escolha sua, queremos que se sinta linda e confortável! Por favor, optem por vestidos longos.
+              </p>
+              
+              <h3 className="text-xl font-medium mb-5 font-serif text-stone-800">Nossa Paleta</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#CE1141] shadow-inner border border-stone-200"></div>
+                  <p className="text-stone-700"><strong className="text-[#CE1141]">Fúcsia</strong> <span className="text-stone-300 mx-2">—</span> Pantone 214 C</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#DA1884] shadow-inner border border-stone-200"></div>
+                  <p className="text-stone-700"><strong className="text-[#DA1884]">Pink</strong> <span className="text-stone-300 mx-2">—</span> Pantone 219 C</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center bg-stone-50 p-6 rounded-2xl border border-stone-100">
+              {/* NOTA: Substitua o link do src= abaixo pelo link da sua imagem das madrinhas */}
+              <img 
+                src="./madrinhas.png" 
+                alt="Inspiração Vestidos Pink" 
+                className="w-full max-w-75 rounded-lg shadow-md mb-6 object-cover aspect-3/4"
+              />
+              <span className="font-serif text-2xl tracking-[0.2em] text-stone-700">PINK</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Padrinhos */}
+        <div className="bg-white rounded-3xl shadow-sm border border-stone-200 p-8 md:p-12 mb-12">
+          <h2 className="font-serif text-3xl mb-8 text-center text-slate-500 border-b border-stone-100 pb-4">Para os Padrinhos</h2>
+          
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="order-2 md:order-1 flex flex-col items-center bg-stone-50 p-6 rounded-2xl border border-stone-100">
+              {/* NOTA: Substitua o link do src= abaixo pelo link da sua imagem dos padrinhos */}
+              <img 
+                src="./padrinhos.png" 
+                alt="Inspiração Terno Cinza Claro" 
+                className="w-full max-w-75 rounded-lg shadow-md mb-6 object-cover aspect-3/4"
+              />
+              <span className="font-serif text-xl tracking-widest text-stone-700 uppercase">Cinza Claro</span>
+            </div>
+
+            <div className="order-1 md:order-2">
+              <h3 className="text-2xl font-medium mb-4 font-serif text-stone-800">O Traje</h3>
+              <p className="text-stone-600 leading-relaxed mb-6">
+                Queremos todos muito elegantes! O traje definido é o <strong>Terno Cinza Claro completo</strong> (calça, paletó e gravata).
+              </p>
+              <ul className="space-y-4 text-stone-600 mb-8">
+                <li className="flex items-center"><CheckCircle2 className="text-green-500 mr-3" size={20} /> Camisa Branca lisa</li>
+                <li className="flex items-center"><CheckCircle2 className="text-green-500 mr-3" size={20} /> Sapato branco ou em tons claros</li>
+                <li className="flex items-start"><Info className="text-blue-500 mr-3 mt-1 shrink-0" size={20} /> <span className="leading-relaxed">A gravata cinza será nosso presente para você! Entregaremos junto com o convite físico.</span></li>
+              </ul>
+
+              <div className="flex items-center gap-4 p-4 bg-stone-100 rounded-xl">
+                <div className="w-12 h-12 bg-[#B0B5B9] shadow-inner rounded-md border border-stone-300"></div>
+                <div>
+                  <p className="font-medium text-stone-800">Cinza Claro</p>
+                  <p className="text-sm text-stone-500">Tom de referência principal</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// TELA 3: INFORMAÇÕES PARA CONVIDADOS
+// ==========================================
+function ConvidadosScreen() {
+  return (
+    <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-16 mt-8">
+          <h1 className="font-serif text-5xl mb-4 text-stone-800">Dicas e Informações</h1>
+          <p className="text-stone-600 max-w-2xl mx-auto">
+            Preparamos com carinho alguns detalhes para que vocês aproveitem ao máximo o nosso grande dia.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Dress Code Geral */}
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8">
+            <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mb-6 text-rose-500">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"/></svg>
+            </div>
+            <h2 className="font-serif text-2xl mb-4 text-stone-800">Dress Code</h2>
+            <p className="text-stone-600 mb-4 font-medium uppercase tracking-wider text-sm">Traje Esporte Fino / Social</p>
+            <p className="text-stone-600 leading-relaxed mb-4">
+              Sugerimos trajes elegantes e confortáveis. A cerimônia será na igreja e a festa em um salão fechado e climatizado.
+            </p>
+            <div className="bg-stone-50 p-4 rounded-lg border border-stone-100">
+              <p className="text-sm flex items-start text-stone-700">
+                <XCircle className="text-red-400 mr-2 shrink-0 mt-1" size={18} />
+                <span>Pedimos a gentileza de <strong>evitar a cor branca e tons muito claros (off-white, gelo)</strong>, que são exclusivos da noiva, bem como a paleta verde das madrinhas.</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Dicas Gerais */}
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8">
+             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-6 text-blue-500">
+               <Info size={24} />
+             </div>
+             <h2 className="font-serif text-2xl mb-4 text-stone-800">Dicas Importantes</h2>
+             <ul className="space-y-4 text-stone-600">
+                <li className="flex items-start">
+                  <div className="w-2 h-2 bg-stone-300 rounded-full mt-2 mr-3 shrink-0"></div>
+                  <p><strong>Pontualidade:</strong> A noiva não irá atrasar! Pedimos que cheguem à igreja com 15 minutos de antecedência.</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="w-2 h-2 bg-stone-300 rounded-full mt-2 mr-3 shrink-0"></div>
+                  <p><strong>Lista de Presentes:</strong> Se desejarem nos presentear, disponibilizamos cotas de lua de mel e itens para nossa casa em nosso site externo.</p>
+                </li>
+                <li className="flex items-start">
+                  <div className="w-2 h-2 bg-stone-300 rounded-full mt-2 mr-3 shrink-0"></div>
+                  <p><strong>Crianças:</strong> Crianças são muito bem-vindas! Teremos um espaço kids com recreadores durante a festa.</p>
+                </li>
+             </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// COMPONENTES AUXILIARES
+// ==========================================
+
+// Interface (Tipo) para o tempo restante
+interface TimeLeft {
+  dias: number;
+  horas: number;
+  min: number;
+  seg: number;
+}
+
+// Contador Regressivo
+function Countdown({ targetDate }: { targetDate: Date }) {
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
+
+  function calculateTimeLeft(): TimeLeft {
+    const difference = +targetDate - +new Date();
+    let timeLeft: TimeLeft = { dias: 0, horas: 0, min: 0, seg: 0 };
+
+    if (difference > 0) {
+      timeLeft = {
+        dias: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        horas: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        min: Math.floor((difference / 1000 / 60) % 60),
+        seg: Math.floor((difference / 1000) % 60),
+      };
+    }
+    return timeLeft;
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+    return () => clearTimeout(timer);
+  });
+
+  const timerItems = [
+    { label: 'Dias', value: timeLeft.dias },
+    { label: 'Horas', value: timeLeft.horas },
+    { label: 'Min', value: timeLeft.min },
+    { label: 'Seg', value: timeLeft.seg },
+  ];
+
+  return (
+    <div className="flex gap-3 md:gap-6 justify-center drop-shadow-xl font-sans">
+      {timerItems.map((item, index) => (
+        <div key={index} className="flex flex-col items-center">
+          <div className="bg-white/20 backdrop-blur-md border border-white/30 text-white w-16 h-16 md:w-24 md:h-24 rounded-lg flex items-center justify-center text-2xl md:text-4xl font-light mb-2">
+            {String(item.value).padStart(2, '0')}
+          </div>
+          <span className="uppercase text-[10px] md:text-xs tracking-widest text-white/90 font-medium">
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Interface (Tipo) para os convidados no RSVP
+interface Guest {
+  id: string;
+  name: string;
+  attending: boolean;
+}
+
+// Formulário de Confirmação (RSVP)
+function RSVPForm() {
+  const [status, setStatus] = useState('idle'); // idle, submitting, success
+  const [message, setMessage] = useState('');
+
+  // ==========================================
+  // SIMULADOR DE FIREBASE / URL
+  // Na versão final, o React pegará o ID da URL: const id = new URLSearchParams(window.location.search).get("id");
+  // ==========================================
+  const [demoMode, setDemoMode] = useState('familia'); // 'familia', 'solteiro' ou 'invalido'
+  const [guests, setGuests] = useState<Guest[]>([]);
+
+  useEffect(() => {
+    // Simulando o retorno do Firebase baseado no "Link" acessado
+    if (demoMode === 'familia') {
+      setGuests([
+        { id: '1', name: 'João da Silva', attending: true },
+        { id: '2', name: 'Maria da Silva', attending: true },
+        { id: '3', name: 'Pedro da Silva', attending: true },
+      ]);
+    } else if (demoMode === 'solteiro') {
+      setGuests([
+        { id: '4', name: 'Carlos Eduardo', attending: true },
+      ]);
+    } else {
+      setGuests([]); // Link inválido
+    }
+    setStatus('idle');
+  }, [demoMode]);
+
+  const toggleGuest = (id: string) => {
+    setGuests(guests.map(g => g.id === id ? { ...g, attending: !g.attending } : g));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('submitting');
+    // Aqui entrará a lógica real de salvar no Firebase
+    console.log("Salvando no Firebase:", { guests, message });
+    
+    setTimeout(() => {
+      setStatus('success');
+    }, 1500);
+  };
+
+  // Se o link acessado for inválido (sem ID)
+  if (demoMode === 'invalido') {
+    return (
+      <div className="max-w-xl mx-auto flex flex-col items-center">
+        {/* Botoes de Simulação apenas para visualizar no Canvas */}
+        <div className="flex gap-2 mb-8 bg-stone-200 p-1 rounded-full text-xs">
+           <button onClick={() => setDemoMode('familia')} className="px-3 py-1 rounded-full text-stone-600 hover:bg-white">Link: Família</button>
+           <button onClick={() => setDemoMode('solteiro')} className="px-3 py-1 rounded-full text-stone-600 hover:bg-white">Link: Solteiro</button>
+           <button onClick={() => setDemoMode('invalido')} className="px-3 py-1 rounded-full bg-white shadow-sm text-stone-800 font-medium">Link: Sem ID</button>
+        </div>
+
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-red-100 text-center w-full">
+          <XCircle className="mx-auto text-red-400 mb-4" size={32} />
+          <h3 className="font-serif text-2xl mb-2 text-stone-800">Acesso Restrito</h3>
+          <p className="text-stone-600">Por favor, acesse esta página através do <strong>link personalizado</strong> que enviamos para o seu WhatsApp para confirmar sua presença.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de Sucesso
+  if (status === 'success') {
+    return (
+      <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-stone-100 text-center animate-fade-in font-sans">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="text-green-500" size={32} />
+        </div>
+        <h3 className="font-serif text-2xl mb-2 text-stone-800">Confirmação Salva!</h3>
+        <p className="text-stone-600 mb-6">Obrigado por responder. Suas escolhas foram registradas com sucesso.</p>
+        
+        {/* Resumo do que foi salvo */}
+        <div className="bg-stone-50 p-4 rounded-xl text-left border border-stone-200 mb-6">
+          <p className="text-sm font-medium text-stone-700 mb-2 uppercase tracking-wider">Resumo:</p>
+          <ul className="space-y-2">
+            {guests.map(g => (
+              <li key={g.id} className="text-sm flex items-center">
+                {g.attending ? <CheckCircle2 size={16} className="text-green-500 mr-2" /> : <XCircle size={16} className="text-red-400 mr-2" />}
+                <span className={g.attending ? 'text-stone-800' : 'text-stone-400 line-through'}>{g.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <button onClick={() => setStatus('idle')} className="text-sm text-stone-500 underline hover:text-stone-800">
+          Alterar resposta
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl mx-auto flex flex-col items-center">
+      {/* Botoes de Simulação apenas para visualizar no Canvas */}
+      <div className="flex gap-2 mb-8 bg-stone-200 p-1 rounded-full text-xs">
+         <button onClick={() => setDemoMode('familia')} className={`px-3 py-1 rounded-full transition-colors ${demoMode === 'familia' ? 'bg-white shadow-sm text-stone-800 font-medium' : 'text-stone-600 hover:bg-white'}`}>Link: Família</button>
+         <button onClick={() => setDemoMode('solteiro')} className={`px-3 py-1 rounded-full transition-colors ${demoMode === 'solteiro' ? 'bg-white shadow-sm text-stone-800 font-medium' : 'text-stone-600 hover:bg-white'}`}>Link: Solteiro</button>
+         <button onClick={() => setDemoMode('invalido')} className="px-3 py-1 rounded-full text-stone-600 hover:bg-white">Link: Sem ID</button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="w-full bg-white p-6 md:p-10 rounded-2xl shadow-lg border border-stone-100 font-sans">
+        <div className="mb-6 text-center border-b border-stone-100 pb-6">
+           <p className="text-sm uppercase tracking-widest text-stone-400 mb-2">Convite para</p>
+           <h3 className="font-serif text-2xl text-stone-800">{demoMode === 'familia' ? 'Família Silva' : 'Carlos Eduardo'}</h3>
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-4 text-center">
+              {guests.length > 1 ? 'Quem estará presente no evento?' : 'Você estará presente no evento?'}
+            </label>
+            
+            {/* Lista de Convidados Dinâmica */}
+            <div className="space-y-3">
+              {guests.map((guest) => (
+                <div 
+                  key={guest.id} 
+                  onClick={() => toggleGuest(guest.id)}
+                  className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${guest.attending ? 'border-green-400 bg-green-50' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'}`}
+                >
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 transition-colors ${guest.attending ? 'border-green-500 bg-green-500' : 'border-stone-300 bg-white'}`}>
+                    {guest.attending && <CheckCircle2 size={16} className="text-white" />}
+                  </div>
+                  <span className={`font-medium transition-colors ${guest.attending ? 'text-stone-800' : 'text-stone-400 line-through'}`}>
+                    {guest.name}
+                  </span>
+                  <span className={`ml-auto text-xs font-medium uppercase tracking-wider ${guest.attending ? 'text-green-600' : 'text-stone-400'}`}>
+                    {guest.attending ? 'Confirmado' : 'Não Irá'}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
-        </section>
 
-        {/* --- DETALHES DO EVENTO --- */}
-        <section className="py-24 px-6 max-w-6xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-serif text-stone-700 mb-4">Quando & Onde</h2>
-          <p className="text-stone-500 mb-16 font-light">Os detalhes para nos acompanharem neste dia especial.</p>
-          
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-            {/* Cerimónia */}
-            <div className="bg-white p-12 rounded-3xl shadow-sm border border-stone-100 hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-rose-200 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-              <div className="flex justify-center mb-6 text-rose-300">
-                <Clock size={40} strokeWidth={1} />
-              </div>
-              <h3 className="text-3xl text-stone-700 font-serif mb-6">A Cerimónia</h3>
-              <p className="mb-6 text-stone-800 font-medium text-lg border-b border-stone-100 pb-4 inline-block">Às 16:00 horas</p>
-              <p className="text-stone-500 leading-relaxed mb-8 font-light">
-                Igreja Menino Jesus de Praga<br />
-                Constatino Nery<br />
-                Manaus - Amazonas
-              </p>
-              <button className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-full bg-stone-50 text-stone-600 hover:bg-rose-50 hover:text-rose-500 transition-colors text-sm font-semibold tracking-wider uppercase">
-                <MapPin size={16} /> Ver no Mapa
-              </button>
-            </div>
-
-            {/* Receção */}
-            <div className="bg-white p-12 rounded-3xl shadow-sm border border-stone-100 hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-rose-200 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-              <div className="flex justify-center mb-6 text-rose-300">
-                <Calendar size={40} strokeWidth={1} />
-              </div>
-              <h3 className="text-3xl text-stone-700 font-serif mb-6">A Receção</h3>
-              <p className="mb-6 text-stone-800 font-medium text-lg border-b border-stone-100 pb-4 inline-block">Às 18:00 horas</p>
-              <p className="text-stone-500 leading-relaxed mb-8 font-light">
-                Quinta dos Jardins<br />
-                Avenida das Árvores, 456 - Bosque<br />
-                Cidade - Estado
-              </p>
-              <button className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-full bg-stone-50 text-stone-600 hover:bg-rose-50 hover:text-rose-500 transition-colors text-sm font-semibold tracking-wider uppercase">
-                <MapPin size={16} /> Ver no Mapa
-              </button>
-            </div>
+          <div>
+             <label className="block text-sm font-medium text-stone-700 mb-2">Restrição alimentar ou mensagem especial?</label>
+             <textarea 
+               rows={3} 
+               value={message}
+               onChange={(e) => setMessage(e.target.value)}
+               placeholder="Deixe sua mensagem aqui (opcional)"
+               className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-rose-200 focus:border-rose-300 outline-none transition-all resize-none bg-stone-50"
+             ></textarea>
           </div>
-        </section>
 
-        {/* --- RSVP SECTION --- */}
-        <section className="bg-stone-800 text-stone-100 py-24 px-6 text-center relative overflow-hidden">
-           <div className="absolute inset-0 opacity-10">
-              <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern id="pattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M0 40L40 0H20L0 20M40 40V20L20 40" fill="none" stroke="currentColor" strokeWidth="1" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#pattern)" />
-              </svg>
-           </div>
-           
-           <div className="relative z-10 max-w-2xl mx-auto">
-             <h2 className="text-4xl md:text-5xl font-serif mb-6 text-white">Confirmar Presença</h2>
-             <p className="text-stone-300 mb-10 text-lg font-light leading-relaxed">
-               A tua presença é o nosso maior presente. Por favor, confirma a tua participação até ao dia 15 de Outubro para organizarmos tudo com muito carinho.
-             </p>
-             <button 
-               onClick={() => setIsRsvpOpen(true)}
-               className="bg-rose-300 text-stone-900 px-10 py-4 rounded-full hover:bg-rose-200 transition duration-300 font-semibold tracking-wider uppercase text-sm shadow-lg hover:shadow-rose-300/20 hover:-translate-y-1"
-             >
-               Confirmar Agora (RSVP)
-             </button>
-           </div>
-        </section>
-
-        {/* --- RODAPÉ --- */}
-        <footer className="bg-stone-900 text-stone-400 py-16 text-center text-sm px-6">
-          <Heart className="mx-auto text-stone-600 mb-6 w-6 h-6" />
-          <p className="font-serif text-2xl mb-4 text-stone-300">{noiva} & {noivo}</p>
-          <p className="font-light mb-1">{nomeCompletoNoiva}</p>
-          <p className="font-light mb-8">{nomeCompletoNoivo}</p>
-          <p className="text-xs tracking-widest uppercase text-stone-600">Com amor, 2026</p>
-        </footer>
-
-        {/* --- MODAL DE RSVP --- */}
-        {isRsvpOpen && (
-          <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-            <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-fade-in-up">
-              <button 
-                onClick={() => setIsRsvpOpen(false)}
-                className="absolute top-6 right-6 text-stone-400 hover:text-stone-600 transition-colors"
-              >
-                <X size={24} />
-              </button>
-              
-              <h3 className="text-3xl font-serif text-stone-700 mb-2 text-center">RSVP</h3>
-              <p className="text-stone-500 text-center text-sm mb-8 font-light">Estamos felizes por partilhar este momento.</p>
-
-              {rsvpSubmitted ? (
-                <div className="text-center py-10">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500">
-                    <Heart size={32} fill="currentColor" />
-                  </div>
-                  <h4 className="text-xl text-stone-800 font-serif mb-2">Obrigado!</h4>
-                  <p className="text-stone-500">A tua presença foi confirmada com sucesso.</p>
-                </div>
-              ) : (
-                <form onSubmit={handleRsvpSubmit} className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Nome Completo</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={rsvpName}
-                      onChange={(e) => setRsvpName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all bg-stone-50"
-                      placeholder="Ex: João Silva"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Acompanhantes (incluindo tu)</label>
-                    <select 
-                      value={rsvpGuests}
-                      onChange={(e) => setRsvpGuests(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 transition-all bg-stone-50"
-                    >
-                      <option value="1">Apenas eu (1)</option>
-                      <option value="2">2 Pessoas</option>
-                      <option value="3">3 Pessoas</option>
-                      <option value="4">4 Pessoas</option>
-                      <option value="5">5 Pessoas</option>
-                    </select>
-                  </div>
-                  
-                  <button 
-                    type="submit"
-                    className="w-full mt-6 bg-stone-800 text-white py-4 rounded-xl hover:bg-stone-700 transition duration-300 font-semibold flex items-center justify-center gap-2 shadow-md"
-                  >
-                    <Send size={18} /> Enviar Confirmação
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
-        
-      </div>
-    </>
+          <button 
+            type="submit" 
+            disabled={status === 'submitting'}
+            className="w-full bg-stone-800 hover:bg-stone-900 text-white font-medium py-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center uppercase tracking-widest text-sm"
+          >
+            {status === 'submitting' ? 'Enviando...' : 'Salvar Confirmação'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

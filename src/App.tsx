@@ -590,17 +590,17 @@ function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
                 <p className="text-stone-500 mb-4 font-medium">Paróquia Menino Jesus de Praga</p>
                 <div className="flex items-start justify-center text-stone-600 mb-2">
                   <MapPin className="mr-2 shrink-0 mt-1" size={18} />
-                  <p className="text-sm">Praça Central, 123 - Centro<br/>Cidade Nova, Estado</p>
+                  <p className="text-sm">Beco Eduardo Ribeiro S/N - 69050-061<br/>Chapada, Manaus - AM</p>
                 </div>
                 <div className="flex items-center justify-center text-stone-600">
                   <Clock className="mr-2" size={18} />
-                  <p className="text-sm">Início pontualmente às 16:00</p>
+                  <p className="text-sm">Início pontualmente às 18:00</p>
                 </div>
               </div>
               <div className="h-64 w-full bg-gray-200">
                 {/* Embed do Google Maps */}
                 <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.1486455113945!2d-46.65342418447571!3d-23.563090784682054!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce59c8da0aa315%3A0xd59f9431f2c9776a!2sAv.%20Paulista%2C%20S%C3%A3o%20Paulo%20-%20SP!5e0!3m2!1spt-BR!2sbr!4v1680000000000!5m2!1spt-BR!2sbr" 
+                  src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d996.004382327813!2d-60.0263368!3d-3.0899917!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x926c11001f2cc491%3A0xa33e7b9921346aef!2sPar%C3%B3quia%20Menino%20Jesus%20de%20Praga!5e0!3m2!1spt-BR!2sbr!4v1777757480550!5m2!1spt-BR!2sbr"
                   width="100%" 
                   height="100%" 
                   style={{ border: 0 }} 
@@ -617,10 +617,10 @@ function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
               <div className="p-8 text-center grow">
                 <Calendar className="mx-auto text-rose-400 mb-4" size={32} />
                 <h3 className="font-serif text-2xl mb-2">Recepção & Festa</h3>
-                <p className="text-stone-500 mb-4 font-medium">Espaço das Águas Figueira</p>
+                <p className="text-stone-500 mb-4 font-medium">Primavera Festas</p>
                 <div className="flex items-start justify-center text-stone-600 mb-2">
                   <MapPin className="mr-2 shrink-0 mt-1" size={18} />
-                  <p className="text-sm">Rodovia do Sol, Km 15 - Zona Rural<br/>Cidade Nova, Estado</p>
+                  <p className="text-sm">R. Luis de la Quintana, 1 - 69054-736<br/>Parque 10 de Novembro, Manaus - AM</p>
                 </div>
                 <div className="flex items-center justify-center text-stone-600">
                   <Clock className="mr-2" size={18} />
@@ -630,7 +630,7 @@ function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
               <div className="h-64 w-full bg-gray-200">
                 {/* Embed do Google Maps */}
                 <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3656.405786636757!2d-46.68069368447502!3d-23.58784968466986!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce574488820f4f%3A0x67397753ebbaab23!2sParque%20Ibirapuera!5e0!3m2!1spt-BR!2sbr!4v1680000000000!5m2!1spt-BR!2sbr" 
+                  src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d1404.0783563282546!2d-59.999954401923944!3d-3.077946712269351!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x926c1bfced1cf419%3A0xca6efd3ef835ccd7!2sPRIMAVERA%20FESTAS!5e0!3m2!1spt-BR!2sbr!4v1777757761898!5m2!1spt-BR!2sbr"
                   width="100%" 
                   height="100%" 
                   style={{ border: 0 }} 

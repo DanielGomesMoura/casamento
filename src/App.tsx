@@ -61,13 +61,43 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  // NOVOS ESTADOS PARA O FIREBASE
+  const [conviteData, setConviteData] = useState<ConviteData | null>(null);
+  const [loading, setLoading] = useState(true);
+
   // Efeito para mudar a cor do menu ao rolar a página
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // EFEITO DO FIREBASE (Busca o ID da URL e pega no Banco)
+  useEffect(() => {
+    const fetchConvite = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const id = urlParams.get("id");
+
+      if (!id) {
+        setLoading(false);
+        return; // Sem ID na URL, conviteData fica null
+      }
+
+      try {
+        const docRef = doc(db, "convite", id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setConviteData({ id, ...docSnap.data() } as ConviteData);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar convite:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConvite();
   }, []);
 
   const navigateTo = (page: string) => {
@@ -76,16 +106,32 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  // NAVEGAÇÃO INTELIGENTE (Só mostra Padrinhos se for padrinho)
   const navLinks = [
     { id: 'home', label: 'O Casamento' },
     { id: 'historia', label: 'Nossa História' },
-    { id: 'padrinhos', label: 'Para Padrinhos' },
+    // A mágica acontece aqui:
+    ...(conviteData?.categoria === 'padrinho' || conviteData?.categoria === 'madrinha' 
+      ? [{ id: 'padrinhos', label: 'Para Padrinhos' }] 
+      : []),
     { id: 'convidados', label: 'Para Convidados' },
   ];
 
   // Lógica para saber se o Header deve ser transparente ou branco
   const isImmersivePage = currentPage === 'home' || currentPage === 'historia';
   const isHeaderWhite = scrolled || !isImmersivePage;
+
+  // TELA DE CARREGAMENTO INICIAL
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#dcd6d0]">
+        <div className="animate-pulse flex flex-col items-center">
+          <Heart className="text-rose-400 mb-4 animate-bounce" size={40} />
+          <p className="font-serif text-stone-600 tracking-widest uppercase">Buscando seu convite...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -180,7 +226,8 @@ export default function App() {
 
       {/* Renderiza o envelope se não estiver aberto */}
       {!isEnvelopeOpen && (
-        <EnvelopeScreen onOpenComplete={() => setIsEnvelopeOpen(true)} />
+        <EnvelopeScreen onOpenComplete={() => setIsEnvelopeOpen(true)} nomeFamilia={conviteData?.familia}
+        />
       )}
 
       {/* Renderiza o site após a abertura do envelope */}
@@ -249,7 +296,7 @@ export default function App() {
 
           {/* ROTEAMENTO SIMPLES */}
           <main className="min-h-screen">
-            {currentPage === 'home' && <HomeScreen />}
+            {currentPage === 'home' && <HomeScreen conviteData={conviteData} />}
             {currentPage === 'historia' && <HistoriaScreen />}
             {currentPage === 'padrinhos' && <PadrinhosScreen />}
             {currentPage === 'convidados' && <ConvidadosScreen />}
@@ -261,7 +308,7 @@ export default function App() {
               <Heart className="mx-auto mb-4 text-rose-400" size={24} />
               <h2 className="font-serif text-2xl mb-2">{BRIDE_NAME} & {GROOM_NAME}</h2>
               <p className="text-sm tracking-widest uppercase mb-6">Com amor, esperamos por você.</p>
-              <p className="text-xs text-stone-500">© {new Date().getFullYear()} - Convite Digital Profissional</p>
+              <p className="text-xs text-stone-500">© {new Date().getFullYear()} - Desenvolvido por Daniel Moura o Noivo</p>
             </div>
           </footer>
         </div>
@@ -273,7 +320,7 @@ export default function App() {
 // ==========================================
 // TELA 4: ENVELOPE DO CLIENTE
 // ==========================================
-function EnvelopeScreen({ onOpenComplete }: { onOpenComplete: () => void }) {
+function EnvelopeScreen({ onOpenComplete, nomeFamilia }: { onOpenComplete: () => void, nomeFamilia?: string }) {
   const [envelopeState, setEnvelopeState] = useState('closed');
 
   const handleOpenEnvelope = () => {
@@ -297,7 +344,7 @@ function EnvelopeScreen({ onOpenComplete }: { onOpenComplete: () => void }) {
         {/* O Convite (Cartão Branco) que desliza para cima */}
         <div className={`absolute left-4 right-4 top-4 bottom-4 bg-white rounded-md shadow-md flex flex-col items-center justify-center p-6 text-center letter-content ${envelopeState === 'opening' ? 'slide-up' : ''}`}>
           <Heart className="text-rose-300 mb-3 w-8 h-8" strokeWidth={1} />
-          <h2 className="text-2xl md:text-3xl font-serif text-stone-700 mb-2">{BRIDE_NAME} & {GROOM_NAME}</h2>
+          <h2 className="text-2xl md:text-3xl font-serif text-stone-700 mb-2">{nomeFamilia || `${BRIDE_NAME} & ${GROOM_NAME}`}</h2>
           <div className="w-12 h-px bg-rose-200 my-3"></div>
           <p className="text-[10px] md:text-xs tracking-[0.2em] uppercase text-stone-400">24 de Outubro de 2026</p>
         </div>
@@ -330,7 +377,7 @@ function EnvelopeScreen({ onOpenComplete }: { onOpenComplete: () => void }) {
       
       {/* Texto de incentivo */}
       <div className={`mt-16 text-stone-500 font-serif italic text-xl transition-opacity duration-500 ${envelopeState === 'opening' ? 'opacity-0' : 'opacity-100'}`}>
-        Tem um convite para ti...
+        Temos uma supresa para você ...
       </div>
     </div>
   );
@@ -469,7 +516,7 @@ function HistoriaScreen() {
 // ==========================================
 // TELA 1: INÍCIO (Convite, Timer, RSVP, Mapas)
 // ==========================================
-function HomeScreen() {
+function HomeScreen({ conviteData }: { conviteData: ConviteData | null }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Efeito do Slider de Imagens
@@ -502,7 +549,7 @@ function HomeScreen() {
           <p className="tracking-[0.3em] uppercase text-sm md:text-base mb-4 drop-shadow-md">Vamos nos casar!</p>
           
           <h1 className="font-serif text-6xl lg:text-8xl xl:text-9xl mb-6 drop-shadow-lg flex flex-col min-[1550px]:flex-row justify-center items-center gap-2 min-[1550px]:gap-6">
-            <span>{BRIDE_NAME}</span>
+              <span className="min-[1550px]:ml-32">{BRIDE_NAME}</span>
             <span className="text-rose-300 italic">&</span>
             <span>{GROOM_NAME}</span>
           </h1>
@@ -526,7 +573,7 @@ function HomeScreen() {
           <h2 className="font-serif text-4xl mb-4 text-stone-800">Confirme sua Presença</h2>
           <p className="text-stone-600">Por favor, confirme sua presença até o dia 15 de Outubro de 2026. Sua resposta é muito importante para nossa organização.</p>
         </div>
-        <RSVPForm />
+        <RSVPForm conviteData={conviteData} />
       </section>
 
       {/* SEÇÃO MAPAS (Localização) */}
@@ -698,7 +745,7 @@ function PadrinhosScreen() {
 function ConvidadosScreen() {
   return (
     <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16 mt-8">
           <h1 className="font-serif text-5xl mb-4 text-stone-800">Dicas e Informações</h1>
           <p className="text-stone-600 max-w-2xl mx-auto">
@@ -720,7 +767,7 @@ function ConvidadosScreen() {
             <div className="bg-stone-50 p-4 rounded-lg border border-stone-100">
               <p className="text-sm flex items-start text-stone-700">
                 <XCircle className="text-red-400 mr-2 shrink-0 mt-1" size={18} />
-                <span>Pedimos a gentileza de <strong>evitar a cor branca e tons muito claros (off-white, gelo)</strong>, que são exclusivos da noiva, bem como a paleta verde das madrinhas.</span>
+                <span><strong>Pedimos a gentileza de evitar o uso da cor branca e de tons muito claros (como off-white, gelo e bege), reservados exclusivamente aos noivos, bem como da cor rosa, que será destinada às madrinhas.</strong></span>
               </p>
             </div>
           </div>
@@ -813,79 +860,65 @@ function Countdown({ targetDate }: { targetDate: Date }) {
   );
 }
 
-// Interface (Tipo) para os convidados no RSVP
-interface Guest {
-  id: string;
-  name: string;
-  attending: boolean;
-}
 
-// Formulário de Confirmação (RSVP)
-function RSVPForm() {
-  const [status, setStatus] = useState('idle'); // idle, submitting, success
+// Formulário de Confirmação (RSVP) CONECTADO AO FIREBASE
+function RSVPForm({ conviteData }: { conviteData: ConviteData | null }) {
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [message, setMessage] = useState('');
+  
+  // Estado local para controlar os checkboxes na tela
+  const [guests, setGuests] = useState<Convidado[]>(conviteData?.convidados || []);
 
-  // ==========================================
-  // SIMULADOR DE FIREBASE / URL
-  // Na versão final, o React pegará o ID da URL: const id = new URLSearchParams(window.location.search).get("id");
-  // ==========================================
-  const [demoMode, setDemoMode] = useState('familia'); // 'familia', 'solteiro' ou 'invalido'
-  const [guests, setGuests] = useState<Guest[]>([]);
-
-  useEffect(() => {
-    // Simulando o retorno do Firebase baseado no "Link" acessado
-    if (demoMode === 'familia') {
-      setGuests([
-        { id: '1', name: 'João da Silva', attending: true },
-        { id: '2', name: 'Maria da Silva', attending: true },
-        { id: '3', name: 'Pedro da Silva', attending: true },
-      ]);
-    } else if (demoMode === 'solteiro') {
-      setGuests([
-        { id: '4', name: 'Carlos Eduardo', attending: true },
-      ]);
-    } else {
-      setGuests([]); // Link inválido
-    }
-    setStatus('idle');
-  }, [demoMode]);
-
-  const toggleGuest = (id: string) => {
-    setGuests(guests.map(g => g.id === id ? { ...g, attending: !g.attending } : g));
+  const toggleGuest = (indexParaAlterar: number) => {
+    setGuests(guests.map((g, index) => 
+      index === indexParaAlterar ? { ...g, confirmado: !g.confirmado } : g
+    ));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus('submitting');
-    // Aqui entrará a lógica real de salvar no Firebase
-    console.log("Salvando no Firebase:", { guests, message });
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // 1. Verificação de segurança: se não temos os dados do convite, não fazemos nada
+  if (!conviteData) return;
+  
+  setStatus('submitting');
+  
+  try {
+    // 2. Referência correta do documento (usando 'convite' no singular como na sua imagem)
+    const docRef = doc(db, "convite", conviteData.id);
     
-    setTimeout(() => {
-      setStatus('success');
-    }, 1500);
-  };
+    // 3. Lógica de Negócio: Contar quantos 'confirmado' estão como true no estado local
+    // Isso garante que o campo 'qtdConfirmados' esteja sempre sincronizado com o array
+    const contagemConfirmados = guests.filter(g => g.confirmado === true).length;
 
-  // Se o link acessado for inválido (sem ID)
-  if (demoMode === 'invalido') {
+    // 4. Update Atômico: Atualiza o array completo e o contador no mesmo comando
+    await updateDoc(docRef, {
+      convidados: guests,            // O array que foi alterado pelos checkboxes
+      qtdConfirmados: contagemConfirmados // O novo número calculado
+    });
+    
+    setStatus('success');
+    console.log(`Sucesso! ${contagemConfirmados} pessoas confirmadas para ${conviteData.familia}`);
+  } catch (error) {
+    console.error("Erro ao salvar no Firestore:", error);
+    alert("Erro ao salvar. Verifique sua conexão ou permissões do Firebase.");
+    setStatus('idle');
+  }
+};
+
+  // Se a pessoa acessou sem o "?id=..." na URL
+  if (!conviteData) {
     return (
       <div className="max-w-xl mx-auto flex flex-col items-center">
-        {/* Botoes de Simulação apenas para visualizar no Canvas */}
-        <div className="flex gap-2 mb-8 bg-stone-200 p-1 rounded-full text-xs">
-           <button onClick={() => setDemoMode('familia')} className="px-3 py-1 rounded-full text-stone-600 hover:bg-white">Link: Família</button>
-           <button onClick={() => setDemoMode('solteiro')} className="px-3 py-1 rounded-full text-stone-600 hover:bg-white">Link: Solteiro</button>
-           <button onClick={() => setDemoMode('invalido')} className="px-3 py-1 rounded-full bg-white shadow-sm text-stone-800 font-medium">Link: Sem ID</button>
-        </div>
-
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-red-100 text-center w-full">
           <XCircle className="mx-auto text-red-400 mb-4" size={32} />
           <h3 className="font-serif text-2xl mb-2 text-stone-800">Acesso Restrito</h3>
-          <p className="text-stone-600">Por favor, acesse esta página através do <strong>link personalizado</strong> que enviamos para o seu WhatsApp para confirmar sua presença.</p>
+          <p className="text-stone-600">Por favor, acesse esta página através do <strong>link personalizado</strong> que enviamos para o seu WhatsApp.</p>
         </div>
       </div>
     );
   }
 
-  // Tela de Sucesso
   if (status === 'success') {
     return (
       <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-stone-100 text-center animate-fade-in font-sans">
@@ -895,14 +928,13 @@ function RSVPForm() {
         <h3 className="font-serif text-2xl mb-2 text-stone-800">Confirmação Salva!</h3>
         <p className="text-stone-600 mb-6">Obrigado por responder. Suas escolhas foram registradas com sucesso.</p>
         
-        {/* Resumo do que foi salvo */}
         <div className="bg-stone-50 p-4 rounded-xl text-left border border-stone-200 mb-6">
           <p className="text-sm font-medium text-stone-700 mb-2 uppercase tracking-wider">Resumo:</p>
           <ul className="space-y-2">
-            {guests.map(g => (
-              <li key={g.id} className="text-sm flex items-center">
-                {g.attending ? <CheckCircle2 size={16} className="text-green-500 mr-2" /> : <XCircle size={16} className="text-red-400 mr-2" />}
-                <span className={g.attending ? 'text-stone-800' : 'text-stone-400 line-through'}>{g.name}</span>
+            {guests.map((g, idx) => (
+              <li key={idx} className="text-sm flex items-center">
+                {g.confirmado ? <CheckCircle2 size={16} className="text-green-500 mr-2" /> : <XCircle size={16} className="text-red-400 mr-2" />}
+                <span className={g.confirmado ? 'text-stone-800' : 'text-stone-400 line-through'}>{g.nome}</span>
               </li>
             ))}
           </ul>
@@ -917,17 +949,10 @@ function RSVPForm() {
 
   return (
     <div className="max-w-xl mx-auto flex flex-col items-center">
-      {/* Botoes de Simulação apenas para visualizar no Canvas */}
-      <div className="flex gap-2 mb-8 bg-stone-200 p-1 rounded-full text-xs">
-         <button onClick={() => setDemoMode('familia')} className={`px-3 py-1 rounded-full transition-colors ${demoMode === 'familia' ? 'bg-white shadow-sm text-stone-800 font-medium' : 'text-stone-600 hover:bg-white'}`}>Link: Família</button>
-         <button onClick={() => setDemoMode('solteiro')} className={`px-3 py-1 rounded-full transition-colors ${demoMode === 'solteiro' ? 'bg-white shadow-sm text-stone-800 font-medium' : 'text-stone-600 hover:bg-white'}`}>Link: Solteiro</button>
-         <button onClick={() => setDemoMode('invalido')} className="px-3 py-1 rounded-full text-stone-600 hover:bg-white">Link: Sem ID</button>
-      </div>
-
       <form onSubmit={handleSubmit} className="w-full bg-white p-6 md:p-10 rounded-2xl shadow-lg border border-stone-100 font-sans">
         <div className="mb-6 text-center border-b border-stone-100 pb-6">
            <p className="text-sm uppercase tracking-widest text-stone-400 mb-2">Convite para</p>
-           <h3 className="font-serif text-2xl text-stone-800">{demoMode === 'familia' ? 'Família Silva' : 'Carlos Eduardo'}</h3>
+           <h3 className="font-serif text-2xl text-stone-800">{conviteData.familia}</h3>
         </div>
 
         <div className="space-y-8">
@@ -936,22 +961,21 @@ function RSVPForm() {
               {guests.length > 1 ? 'Quem estará presente no evento?' : 'Você estará presente no evento?'}
             </label>
             
-            {/* Lista de Convidados Dinâmica */}
             <div className="space-y-3">
-              {guests.map((guest) => (
+              {guests.map((guest, index) => (
                 <div 
-                  key={guest.id} 
-                  onClick={() => toggleGuest(guest.id)}
-                  className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${guest.attending ? 'border-green-400 bg-green-50' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'}`}
+                  key={index} 
+                  onClick={() => toggleGuest(index)}
+                  className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${guest.confirmado ? 'border-green-400 bg-green-50' : 'border-stone-200 bg-stone-50 hover:bg-stone-100'}`}
                 >
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 transition-colors ${guest.attending ? 'border-green-500 bg-green-500' : 'border-stone-300 bg-white'}`}>
-                    {guest.attending && <CheckCircle2 size={16} className="text-white" />}
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 transition-colors ${guest.confirmado ? 'border-green-500 bg-green-500' : 'border-stone-300 bg-white'}`}>
+                    {guest.confirmado && <CheckCircle2 size={16} className="text-white" />}
                   </div>
-                  <span className={`font-medium transition-colors ${guest.attending ? 'text-stone-800' : 'text-stone-400 line-through'}`}>
-                    {guest.name}
+                  <span className={`font-medium transition-colors ${guest.confirmado ? 'text-stone-800' : 'text-stone-400 line-through'}`}>
+                    {guest.nome}
                   </span>
-                  <span className={`ml-auto text-xs font-medium uppercase tracking-wider ${guest.attending ? 'text-green-600' : 'text-stone-400'}`}>
-                    {guest.attending ? 'Confirmado' : 'Não Irá'}
+                  <span className={`ml-auto text-xs font-medium uppercase tracking-wider ${guest.confirmado ? 'text-green-600' : 'text-stone-400'}`}>
+                    {guest.confirmado ? 'Confirmado' : 'Não Irá'}
                   </span>
                 </div>
               ))}
@@ -959,12 +983,12 @@ function RSVPForm() {
           </div>
 
           <div>
-             <label className="block text-sm font-medium text-stone-700 mb-2">Restrição alimentar ou mensagem especial?</label>
+             <label className="block text-sm font-medium text-stone-700 mb-2">Mensagem aos noivos</label>
              <textarea 
                rows={3} 
                value={message}
                onChange={(e) => setMessage(e.target.value)}
-               placeholder="Deixe sua mensagem aqui (opcional)"
+               placeholder="Deixe uma mensagem aqui (opcional)"
                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:ring-2 focus:ring-rose-200 focus:border-rose-300 outline-none transition-all resize-none bg-stone-50"
              ></textarea>
           </div>

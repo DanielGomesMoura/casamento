@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Heart, MapPin, Calendar, Clock, CheckCircle2, XCircle, Menu, X, Info, ChevronLeft, ChevronRight } from 'lucide-react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase.config'; // Ajuste o caminho se necessário
 
 // ADICIONE AS INTERFACES DO BANCO:
@@ -115,6 +115,7 @@ export default function App() {
       ? [{ id: 'padrinhos', label: 'Para Padrinhos' }] 
       : []),
     { id: 'convidados', label: 'Para Convidados' },
+    { id: 'presentes', label: 'Lista de Presentes' },
   ];
 
   // Lógica para saber se o Header deve ser transparente ou branco
@@ -300,6 +301,7 @@ export default function App() {
             {currentPage === 'historia' && <HistoriaScreen />}
             {currentPage === 'padrinhos' && <PadrinhosScreen />}
             {currentPage === 'convidados' && <ConvidadosScreen />}
+            {currentPage === 'presentes' && <PresentesScreen />}
           </main>
 
           {/* FOOTER */}
@@ -1002,6 +1004,152 @@ function RSVPForm({ conviteData }: { conviteData: ConviteData | null }) {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ==========================================
+// TELA 4: LISTA DE PRESENTES
+// ==========================================
+interface Presente {
+  id: string;
+  titulo: string;
+  imagemUrl: string;
+  valor: number;
+}
+
+function PresentesScreen() {
+  const [presentes, setPresentes] = useState<Presente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPresente, setSelectedPresente] = useState<Presente | null>(null);
+
+  // CHAVE PIX DO CASAL (O usuário pode alterar)
+  const CHAVE_PIX = "seu-email-ou-telefone@pix.com.br";
+  const NOME_PIX = "Daniel Gomes Moura";
+
+  useEffect(() => {
+    const fetchPresentes = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'presentes'));
+        const dados: Presente[] = [];
+        querySnapshot.forEach((docSnap) => {
+          dados.push({ id: docSnap.id, ...docSnap.data() } as Presente);
+        });
+        setPresentes(dados);
+      } catch (error) {
+        console.error("Erro ao buscar presentes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPresentes();
+  }, []);
+
+  const handlePresentear = (presente: Presente) => {
+    setSelectedPresente(presente);
+    setModalOpen(true);
+  };
+
+  const copiarPix = () => {
+    navigator.clipboard.writeText(CHAVE_PIX);
+    alert("Chave PIX copiada! Agora é só colar no app do seu banco.");
+  };
+
+  return (
+    <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16 mt-8">
+          <h1 className="font-serif text-5xl mb-4 text-stone-800">Lista de Presentes</h1>
+          <p className="text-stone-600 max-w-2xl mx-auto">
+            O maior presente é ter vocês com a gente neste dia! Mas se quiserem nos abençoar com algo a mais para nossa vida a dois, criamos essa listinha simbólica.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center p-12">
+             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400"></div>
+          </div>
+        ) : presentes.length === 0 ? (
+          <div className="text-center text-stone-500 p-12 bg-white rounded-2xl shadow-sm border border-stone-200">
+            A lista de presentes ainda está sendo preparada. Volte em breve!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {presentes.map(presente => (
+              <div key={presente.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                <div className="h-48 overflow-hidden bg-stone-100 relative">
+                  <img src={presente.imagemUrl} alt={presente.titulo} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                </div>
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="font-semibold text-stone-800 mb-2">{presente.titulo}</h3>
+                  <p className="text-rose-500 font-medium mt-auto mb-4 text-lg">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(presente.valor)}
+                  </p>
+                  <button 
+                    onClick={() => handlePresentear(presente)}
+                    className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-900 transition-colors"
+                  >
+                    Presentear
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal PIX */}
+      {modalOpen && selectedPresente && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 relative animate-fade-in shadow-2xl">
+            <button 
+              onClick={() => setModalOpen(false)}
+              className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              <XCircle size={24} />
+            </button>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Heart className="text-rose-400" size={32} />
+              </div>
+              <h2 className="font-serif text-2xl mb-2 text-stone-800">Muito Obrigado!</h2>
+              <p className="text-stone-600 mb-6 text-sm">
+                Para presentear com <strong>"{selectedPresente.titulo}"</strong>, faça um PIX no valor abaixo usando a função "Copia e Cola" do seu banco.
+              </p>
+
+              <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-left space-y-4 shadow-inner">
+                <div>
+                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Chave PIX</p>
+                  <p className="font-medium text-stone-800 text-lg break-all">{CHAVE_PIX}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Nome do Recebedor</p>
+                  <p className="font-medium text-stone-800">{NOME_PIX}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
+                  <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={copiarPix}
+                className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
+              >
+                Copiar Chave PIX
+              </button>
+              <button 
+                onClick={() => setModalOpen(false)}
+                className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-medium hover:bg-stone-200 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

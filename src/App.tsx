@@ -1161,49 +1161,67 @@ function PresentesScreen() {
               <XCircle size={24} />
             </button>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Heart className="text-rose-400" size={32} />
-              </div>
-              <h2 className="font-serif text-2xl mb-2 text-stone-800">Muito Obrigado!</h2>
-              <p className="text-stone-600 mb-6 text-sm">
-                Para presentear com <strong>"{selectedPresente.titulo}"</strong>, faça um PIX no valor abaixo usando a função "Copia e Cola" do seu banco.
-              </p>
-
-              <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-center space-y-4 shadow-inner">
-                {loadingPix ? (
-                  <div className="flex flex-col items-center justify-center py-6">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-400 mb-4"></div>
-                    <p className="text-stone-500 text-sm">Gerando seu PIX...</p>
-                  </div>
-                ) : pixError ? (
-                  <div className="text-red-500 text-sm py-4">{pixError}</div>
-                ) : pixImage ? (
-                  <div className="flex flex-col items-center">
-                    <img src={`data:image/png;base64,${pixImage}`} alt="QR Code PIX" className="w-48 h-48 rounded-lg shadow-sm mb-4" />
-                    <div>
-                      <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
-                      <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              {pixPayload && (
+            {presentes.find(p => p.id === selectedPresente.id)?.status === 'vendido' ? (
+              <div className="text-center py-8">
+                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle2 className="text-green-500 w-12 h-12" />
+                </div>
+                <h2 className="font-serif text-3xl mb-4 text-stone-800">Pagamento Confirmado!</h2>
+                <p className="text-stone-600 mb-8 text-lg">
+                  Muito obrigado por nos presentear com <strong>"{selectedPresente.titulo}"</strong>. Ficamos imensamente felizes com o seu carinho!
+                </p>
                 <button
-                  onClick={copiarPix}
-                  className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
+                  onClick={() => setModalOpen(false)}
+                  className="w-full bg-stone-800 hover:bg-stone-900 text-white font-medium py-4 rounded-xl transition-all shadow-md"
                 >
-                  Copiar Chave PIX
+                  Fechar
                 </button>
-              )}
-              <button
-                onClick={() => setModalOpen(false)}
-                className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-medium hover:bg-stone-200 transition-colors"
-              >
-                Fechar
-              </button>
-            </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Heart className="text-rose-400" size={32} />
+                </div>
+                <h2 className="font-serif text-2xl mb-2 text-stone-800">Muito Obrigado!</h2>
+                <p className="text-stone-600 mb-6 text-sm">
+                  Para presentear com <strong>"{selectedPresente.titulo}"</strong>, faça um PIX no valor abaixo usando a função "Copia e Cola" do seu banco.
+                </p>
+
+                <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-center space-y-4 shadow-inner">
+                  {loadingPix ? (
+                    <div className="flex flex-col items-center justify-center py-6">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-400 mb-4"></div>
+                      <p className="text-stone-500 text-sm">Gerando seu PIX...</p>
+                    </div>
+                  ) : pixError ? (
+                    <div className="text-red-500 text-sm py-4">{pixError}</div>
+                  ) : pixImage ? (
+                    <div className="flex flex-col items-center">
+                      <img src={`data:image/png;base64,${pixImage}`} alt="QR Code PIX" className="w-48 h-48 rounded-lg shadow-sm mb-4" />
+                      <div>
+                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
+                        <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {pixPayload && (
+                  <button
+                    onClick={copiarPix}
+                    className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
+                  >
+                    Copiar Chave PIX
+                  </button>
+                )}
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-medium hover:bg-stone-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

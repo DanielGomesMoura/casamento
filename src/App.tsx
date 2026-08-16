@@ -1058,13 +1058,22 @@ function PresentesScreen() {
     setPixError('');
 
     try {
+      let nomeConvidado = window.location.pathname.replace(/^\/+/g, '').trim();
+      if (!nomeConvidado || nomeConvidado === 'admin' || nomeConvidado === 'admin.html') {
+         nomeConvidado = "Convidado do Casamento";
+      } else {
+         // Converte "familia-lameira" em "Familia Lameira"
+         nomeConvidado = nomeConvidado.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      }
+
       const res = await fetch('/api/createPix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          valor: presente.valor,
+          valor: Number(presente.valor),
           titulo: presente.titulo,
-          presenteId: presente.id
+          presenteId: presente.id,
+          nomeConvidado: nomeConvidado
         })
       });
       

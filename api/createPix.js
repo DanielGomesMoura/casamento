@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { valor, titulo, presenteId } = req.body;
+  const { valor, titulo, presenteId, nomeConvidado } = req.body;
   const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
 
   if (!ASAAS_API_KEY) {
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
           'access_token': ASAAS_API_KEY
         },
         body: JSON.stringify({
-          name: "Convidado do Casamento",
+          name: nomeConvidado || "Convidado do Casamento",
           cpfCnpj: "69671134297" // O Asaas exige um CPF para criar o cliente
         })
       });
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           customer: customerId,
           billingType: 'PIX',
-          value: valor,
+          value: Number(valor),
           dueDate: amanha.toISOString().split('T')[0],
           description: `Presente: ${titulo}`,
           externalReference: presenteId, // Salvamos o ID do presente para identificar depois

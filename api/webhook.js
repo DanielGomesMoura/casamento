@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 
 // Inicializar Firebase (mesma config do frontend)
@@ -11,7 +11,7 @@ const firebaseConfig = {
   appId: "1:551558262370:web:9b67adf2f6ecea03d72b3b"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
 export default async function handler(req, res) {

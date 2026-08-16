@@ -22,21 +22,22 @@ interface Presente {
     titulo: string;
     imagemUrl: string;
     valor: number;
+    isExclusivo?: boolean;
 }
 
 export default function AdminApp() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
     const [loginError, setLoginError] = useState('');
-    
+
     const [activeTab, setActiveTab] = useState<'convidados' | 'presentes'>('convidados');
 
     // Estados para Convidados
     const [familias, setFamilias] = useState<FamiliaData[]>([]);
-    
+
     // Estados para Presentes
     const [presentes, setPresentes] = useState<Presente[]>([]);
-    const [novoPresente, setNovoPresente] = useState({ titulo: '', imagemUrl: '', valor: '' });
+    const [novoPresente, setNovoPresente] = useState({ titulo: '', imagemUrl: '', valor: '', isExclusivo: false });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editandoId, setEditandoId] = useState<string | null>(null);
 
@@ -95,34 +96,38 @@ export default function AdminApp() {
                 await updateDoc(docRef, {
                     titulo: novoPresente.titulo,
                     imagemUrl: novoPresente.imagemUrl || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=2040&auto=format&fit=crop',
-                    valor: parseFloat(novoPresente.valor)
+                    valor: parseFloat(novoPresente.valor),
+                    isExclusivo: novoPresente.isExclusivo
                 });
-                
+
                 setPresentes(presentes.map(p => p.id === editandoId ? {
                     ...p,
                     titulo: novoPresente.titulo,
                     imagemUrl: novoPresente.imagemUrl || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=2040&auto=format&fit=crop',
-                    valor: parseFloat(novoPresente.valor)
+                    valor: parseFloat(novoPresente.valor),
+                    isExclusivo: novoPresente.isExclusivo
                 } : p));
-                
+
                 setEditandoId(null);
             } else {
                 // Criar novo
                 const docRef = await addDoc(collection(db, 'presentes'), {
                     titulo: novoPresente.titulo,
                     imagemUrl: novoPresente.imagemUrl || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=2040&auto=format&fit=crop',
-                    valor: parseFloat(novoPresente.valor)
+                    valor: parseFloat(novoPresente.valor),
+                    isExclusivo: novoPresente.isExclusivo
                 });
-                
+
                 setPresentes([...presentes, {
                     id: docRef.id,
                     titulo: novoPresente.titulo,
                     imagemUrl: novoPresente.imagemUrl || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=2040&auto=format&fit=crop',
-                    valor: parseFloat(novoPresente.valor)
+                    valor: parseFloat(novoPresente.valor),
+                    isExclusivo: novoPresente.isExclusivo
                 }]);
             }
-            
-            setNovoPresente({ titulo: '', imagemUrl: '', valor: '' });
+
+            setNovoPresente({ titulo: '', imagemUrl: '', valor: '', isExclusivo: false });
         } catch (error) {
             console.error("Erro ao salvar presente:", error);
             alert("Erro ao salvar presente.");
@@ -130,20 +135,21 @@ export default function AdminApp() {
             setIsSubmitting(false);
         }
     };
-    
+
     const handleEditClick = (presente: Presente) => {
         setEditandoId(presente.id);
         setNovoPresente({
             titulo: presente.titulo,
             imagemUrl: presente.imagemUrl,
-            valor: presente.valor.toString()
+            valor: presente.valor.toString(),
+            isExclusivo: presente.isExclusivo || false
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleDeletePresente = async (id: string) => {
         if (!window.confirm('Tem certeza que deseja excluir este presente?')) return;
-        
+
         try {
             await deleteDoc(doc(db, 'presentes', id));
             setPresentes(presentes.filter(p => p.id !== id));
@@ -236,20 +242,20 @@ export default function AdminApp() {
                             </div>
                             <h1 className="text-xl font-semibold text-slate-800 hidden sm:block">Painel</h1>
                         </div>
-                        
+
                         {/* Tabs Navegação */}
                         <div className="flex gap-2 bg-slate-100 p-1 rounded-lg">
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('convidados')}
                                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'convidados' ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                <span className="flex items-center gap-2"><Users className="w-4 h-4"/> Convidados</span>
+                                <span className="flex items-center gap-2"><Users className="w-4 h-4" /> Convidados</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('presentes')}
                                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${activeTab === 'presentes' ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                <span className="flex items-center gap-2"><Gift className="w-4 h-4"/> Presentes</span>
+                                <span className="flex items-center gap-2"><Gift className="w-4 h-4" /> Presentes</span>
                             </button>
                         </div>
                     </div>
@@ -274,7 +280,7 @@ export default function AdminApp() {
 
             {/* Main Content */}
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:py-0 print:max-w-full">
-                
+
                 {activeTab === 'convidados' ? (
                     <>
                         {/* Cabeçalho exclusivo para impressão */}
@@ -353,11 +359,11 @@ export default function AdminApp() {
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
                             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                                 <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                    {editandoId ? <Edit2 className="w-5 h-5 text-primary-600"/> : <Plus className="w-5 h-5 text-primary-600"/>} 
+                                    {editandoId ? <Edit2 className="w-5 h-5 text-primary-600" /> : <Plus className="w-5 h-5 text-primary-600" />}
                                     {editandoId ? 'Editar Presente' : 'Adicionar Novo Presente'}
                                 </h2>
                                 {editandoId && (
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             setEditandoId(null);
                                             setNovoPresente({ titulo: '', imagemUrl: '', valor: '' });
@@ -377,7 +383,7 @@ export default function AdminApp() {
                                             type="text"
                                             placeholder="Ex: Cota Passeio de Lancha"
                                             value={novoPresente.titulo}
-                                            onChange={(e) => setNovoPresente({...novoPresente, titulo: e.target.value})}
+                                            onChange={(e) => setNovoPresente({ ...novoPresente, titulo: e.target.value })}
                                             className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none"
                                         />
                                     </div>
@@ -390,7 +396,7 @@ export default function AdminApp() {
                                             step="0.01"
                                             placeholder="Ex: 150.00"
                                             value={novoPresente.valor}
-                                            onChange={(e) => setNovoPresente({...novoPresente, valor: e.target.value})}
+                                            onChange={(e) => setNovoPresente({ ...novoPresente, valor: e.target.value })}
                                             className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none"
                                         />
                                     </div>
@@ -406,11 +412,23 @@ export default function AdminApp() {
                                                 type="url"
                                                 placeholder="https://..."
                                                 value={novoPresente.imagemUrl}
-                                                onChange={(e) => setNovoPresente({...novoPresente, imagemUrl: e.target.value})}
+                                                onChange={(e) => setNovoPresente({ ...novoPresente, imagemUrl: e.target.value })}
                                                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none"
                                             />
                                         </div>
                                     </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isExclusivo"
+                                        checked={novoPresente.isExclusivo}
+                                        onChange={(e) => setNovoPresente({ ...novoPresente, isExclusivo: e.target.checked })}
+                                        className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                                    />
+                                    <label htmlFor="isExclusivo" className="text-sm font-medium text-slate-700">
+                                        Presente Exclusivo (Sairá da lista quando alguém comprar)
+                                    </label>
                                 </div>
                                 <div className="flex justify-end pt-2">
                                     <button
@@ -418,7 +436,7 @@ export default function AdminApp() {
                                         disabled={isSubmitting}
                                         className="bg-primary-600 text-white font-medium py-2 px-6 rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-70 flex items-center gap-2"
                                     >
-                                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin"/> : (editandoId ? <Edit2 className="w-4 h-4"/> : <Plus className="w-4 h-4"/>)}
+                                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (editandoId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />)}
                                         {editandoId ? 'Atualizar Presente' : 'Salvar Presente'}
                                     </button>
                                 </div>
@@ -430,7 +448,7 @@ export default function AdminApp() {
                                 <h2 className="text-lg font-semibold text-slate-800">Presentes Cadastrados</h2>
                                 <span className="text-sm text-slate-500">{presentes.length} itens</span>
                             </div>
-                            
+
                             {presentes.length === 0 ? (
                                 <div className="p-12 text-center text-slate-500">
                                     Nenhum presente cadastrado na lista.
@@ -439,9 +457,9 @@ export default function AdminApp() {
                                 <div className="divide-y divide-slate-100">
                                     {presentes.map((presente) => (
                                         <div key={presente.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-                                            <img 
-                                                src={presente.imagemUrl} 
-                                                alt={presente.titulo} 
+                                            <img
+                                                src={presente.imagemUrl}
+                                                alt={presente.titulo}
                                                 className="w-16 h-16 rounded-lg object-cover bg-slate-200 shrink-0"
                                             />
                                             <div className="flex-1">

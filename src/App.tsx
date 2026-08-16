@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Heart, MapPin, Calendar, Clock, CheckCircle2, XCircle, Menu, X, Info, ChevronLeft, ChevronRight } from 'lucide-react';
-import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.config'; // Ajuste o caminho se necessário
 
 // ADICIONE AS INTERFACES DO BANCO:
@@ -1014,8 +1014,10 @@ function RSVPForm({ conviteData }: { conviteData: ConviteData | null }) {
 interface Presente {
   id: string;
   titulo: string;
-  imagemUrl: string;
   valor: number;
+  imagemUrl: string;
+  isExclusivo?: boolean;
+  status?: string;
 }
 
 function PresentesScreen() {
@@ -1023,37 +1025,70 @@ function PresentesScreen() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPresente, setSelectedPresente] = useState<Presente | null>(null);
-
-  // CHAVE PIX DO CASAL (O usuário pode alterar)
-  const CHAVE_PIX = "seu-email-ou-telefone@pix.com.br";
-  const NOME_PIX = "Daniel Gomes Moura";
+  
+  // Estados do PIX Dinâmico
+  const [loadingPix, setLoadingPix] = useState(false);
+  const [pixImage, setPixImage] = useState<string | null>(null);
+  const [pixPayload, setPixPayload] = useState<string | null>(null);
+  const [pixError, setPixError] = useState('');
 
   useEffect(() => {
-    const fetchPresentes = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'presentes'));
-        const dados: Presente[] = [];
-        querySnapshot.forEach((docSnap) => {
-          dados.push({ id: docSnap.id, ...docSnap.data() } as Presente);
-        });
-        setPresentes(dados);
-      } catch (error) {
-        console.error("Erro ao buscar presentes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPresentes();
+    // Usar onSnapshot para atualizar a tela em tempo real
+    const unsubscribe = onSnapshot(collection(db, 'presentes'), (snapshot) => {
+      const dados: Presente[] = [];
+      snapshot.forEach((docSnap) => {
+        dados.push({ id: docSnap.id, ...docSnap.data() } as Presente);
+      });
+      setPresentes(dados);
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao buscar presentes:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handlePresentear = (presente: Presente) => {
+  const handlePresentear = async (presente: Presente) => {
     setSelectedPresente(presente);
     setModalOpen(true);
+    setLoadingPix(true);
+    setPixImage(null);
+    setPixPayload(null);
+    setPixError('');
+
+    try {
+      const res = await fetch('/api/createPix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          valor: presente.valor,
+          titulo: presente.titulo,
+          presenteId: presente.id
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao gerar PIX');
+      }
+
+      setPixImage(data.qrCodeImage);
+      setPixPayload(data.pixPayload);
+    } catch (err: any) {
+      console.error(err);
+      setPixError('Não foi possível gerar o PIX no momento. Tente novamente mais tarde.');
+    } finally {
+      setLoadingPix(false);
+    }
   };
 
   const copiarPix = () => {
-    navigator.clipboard.writeText(CHAVE_PIX);
-    alert("Chave PIX copiada! Agora é só colar no app do seu banco.");
+    if (pixPayload) {
+      navigator.clipboard.writeText(pixPayload);
+      alert("Chave PIX copiada! Agora é só colar no app do seu banco.");
+    }
   };
 
   return (
@@ -1076,25 +1111,34 @@ function PresentesScreen() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {presentes.map(presente => (
-              <div key={presente.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+            {presentes.map(presente => {
+              const isVendido = presente.isExclusivo && presente.status === 'vendido';
+              
+              return (
+              <div key={presente.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow relative">
+                {isVendido && (
+                  <div className="absolute top-4 right-4 bg-stone-900 text-white text-xs font-bold px-3 py-1.5 rounded-full z-10 shadow-lg uppercase tracking-wider">
+                    Esgotado
+                  </div>
+                )}
                 <div className="h-48 overflow-hidden bg-stone-100 relative">
-                  <img src={presente.imagemUrl} alt={presente.titulo} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                  <img src={presente.imagemUrl} alt={presente.titulo} className={`w-full h-full object-cover transition-transform duration-500 ${isVendido ? 'grayscale opacity-70' : 'hover:scale-105'}`} />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
-                  <h3 className="font-semibold text-stone-800 mb-2">{presente.titulo}</h3>
-                  <p className="text-rose-500 font-medium mt-auto mb-4 text-lg">
+                  <h3 className={`font-semibold mb-2 ${isVendido ? 'text-stone-400' : 'text-stone-800'}`}>{presente.titulo}</h3>
+                  <p className={`${isVendido ? 'text-stone-400' : 'text-rose-500'} font-medium mt-auto mb-4 text-lg`}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(presente.valor)}
                   </p>
                   <button 
                     onClick={() => handlePresentear(presente)}
-                    className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-900 transition-colors"
+                    disabled={isVendido}
+                    className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${isVendido ? 'bg-stone-100 text-stone-400 cursor-not-allowed' : 'bg-stone-800 text-white hover:bg-stone-900'}`}
                   >
-                    Presentear
+                    {isVendido ? 'Já Comprado' : 'Presentear'}
                   </button>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -1119,27 +1163,33 @@ function PresentesScreen() {
                 Para presentear com <strong>"{selectedPresente.titulo}"</strong>, faça um PIX no valor abaixo usando a função "Copia e Cola" do seu banco.
               </p>
 
-              <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-left space-y-4 shadow-inner">
-                <div>
-                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Chave PIX</p>
-                  <p className="font-medium text-stone-800 text-lg break-all">{CHAVE_PIX}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Nome do Recebedor</p>
-                  <p className="font-medium text-stone-800">{NOME_PIX}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
-                  <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
-                </div>
+              <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 mb-6 text-center space-y-4 shadow-inner">
+                {loadingPix ? (
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-400 mb-4"></div>
+                    <p className="text-stone-500 text-sm">Gerando seu PIX...</p>
+                  </div>
+                ) : pixError ? (
+                  <div className="text-red-500 text-sm py-4">{pixError}</div>
+                ) : pixImage ? (
+                  <div className="flex flex-col items-center">
+                    <img src={`data:image/png;base64,${pixImage}`} alt="QR Code PIX" className="w-48 h-48 rounded-lg shadow-sm mb-4" />
+                    <div>
+                      <p className="text-xs text-stone-400 uppercase tracking-wider mb-1">Valor do Presente</p>
+                      <p className="font-medium text-rose-500 text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedPresente.valor)}</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
-              <button 
-                onClick={copiarPix}
-                className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
-              >
-                Copiar Chave PIX
-              </button>
+              {pixPayload && (
+                <button 
+                  onClick={copiarPix}
+                  className="w-full bg-rose-500 text-white py-3 rounded-xl font-medium hover:bg-rose-600 transition-colors mb-3 shadow-md"
+                >
+                  Copiar Chave PIX
+                </button>
+              )}
               <button 
                 onClick={() => setModalOpen(false)}
                 className="w-full bg-stone-100 text-stone-600 py-3 rounded-xl font-medium hover:bg-stone-200 transition-colors"

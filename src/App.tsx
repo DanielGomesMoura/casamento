@@ -1078,7 +1078,7 @@ function PresentesScreen() {
       setPixPayload(data.pixPayload);
     } catch (err: any) {
       console.error(err);
-      setPixError('Não foi possível gerar o PIX no momento. Tente novamente mais tarde.');
+      setPixError(err.message || 'Não foi possível gerar o PIX no momento. Tente novamente mais tarde.');
     } finally {
       setLoadingPix(false);
     }

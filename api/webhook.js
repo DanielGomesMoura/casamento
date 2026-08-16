@@ -20,11 +20,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { event, payment } = req.body;
+    const body = req.body || {};
+    const { event, payment } = body;
 
     // Verificar se o evento é de pagamento recebido ou confirmado
     if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
-      const presenteId = payment.externalReference;
+      const presenteId = payment?.externalReference;
       
       if (presenteId) {
         console.log(`Pagamento confirmado para o presente: ${presenteId}`);

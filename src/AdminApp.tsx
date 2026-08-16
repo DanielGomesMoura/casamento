@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { Users, CheckCircle2, Loader2, ArrowLeft, Lock, ChevronRight, Gift, Plus, Trash2, Image as ImageIcon, Edit2 } from 'lucide-react';
 import { db } from '../firebase.config';
@@ -366,7 +366,7 @@ export default function AdminApp() {
                                     <button
                                         onClick={() => {
                                             setEditandoId(null);
-                                            setNovoPresente({ titulo: '', imagemUrl: '', valor: '' });
+                                            setNovoPresente({ titulo: '', imagemUrl: '', valor: '', isExclusivo: false });
                                         }}
                                         className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
                                     >

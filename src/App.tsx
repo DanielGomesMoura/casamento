@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Heart, MapPin, Calendar, Clock, CheckCircle2, XCircle, Menu, X, Info, ChevronLeft, ChevronRight } from 'lucide-react';
-import { doc, getDoc, updateDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase.config'; // Ajuste o caminho se necessário
 
 // ADICIONE AS INTERFACES DO BANCO:

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore/lite';
 
 // Inicializar Firebase (mesma config do frontend)
 const firebaseConfig = {
@@ -41,10 +41,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // O Asaas exige que retornemos 200 OK rapidamente
+    // Retorna 200 OK imediatamente para o Asaas não bloquear o webhook
     return res.status(200).json({ received: true });
   } catch (error) {
-    console.error('Erro no Webhook:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Erro interno ao atualizar Firebase:', error);
+    // MESMO COM ERRO, retornamos 200 pro Asaas para não pausar a fila
+    return res.status(200).json({ received: true, error: error.message });
   }
 }

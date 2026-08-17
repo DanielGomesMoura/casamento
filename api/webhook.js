@@ -15,8 +15,9 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 
 export default async function handler(req, res) {
+  // Se o Asaas mandar um GET ou OPTIONS apenas para testar a URL (Ping)
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(200).json({ received: true, message: 'Webhook is active' });
   }
 
   try {

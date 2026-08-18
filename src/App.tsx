@@ -299,7 +299,7 @@ export default function App() {
             {currentPage === 'historia' && <HistoriaScreen />}
             {currentPage === 'padrinhos' && <PadrinhosScreen />}
             {currentPage === 'convidados' && <ConvidadosScreen />}
-            {currentPage === 'presentes' && <PresentesScreen />}
+            {currentPage === 'presentes' && <PresentesScreen conviteData={conviteData} />}
           </main>
 
           {/* FOOTER */}
@@ -1018,7 +1018,7 @@ interface Presente {
   lastPaidAt?: number;
 }
 
-function PresentesScreen() {
+function PresentesScreen({ conviteData }: { conviteData: ConviteData | null }) {
   const [presentes, setPresentes] = useState<Presente[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1121,7 +1121,13 @@ function PresentesScreen() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {presentes.map(presente => {
+            {presentes.filter(presente => {
+              const titleLower = (presente.titulo || '').toLowerCase();
+              if (titleLower.includes('primeiro casal de padrinhos') || titleLower.includes('casal de padrinhos')) {
+                 return conviteData?.categoria === 'padrinho' || conviteData?.categoria === 'madrinha';
+              }
+              return true;
+            }).map(presente => {
               const titleLower = (presente.titulo || '').toLowerCase();
               const isExclusivo = presente.isExclusivo || 
                                   titleLower.includes('pedir') || 

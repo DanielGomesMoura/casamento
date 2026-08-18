@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore/lite';
+import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore/lite';
 
 // Inicializar Firebase (mesma config do frontend)
 const firebaseConfig = {
@@ -33,10 +33,27 @@ export default async function handler(req, res) {
         // Atualiza o status do presente no Firestore
         const presenteRef = doc(db, 'presentes', presenteId);
         
-        // Vamos atualizar o campo 'status' para 'vendido'
-        await updateDoc(presenteRef, {
-          status: 'vendido' // Usaremos isso no frontend para saber que foi vendido
-        });
+        // Busca as informações do presente para saber se ele é exclusivo
+        const pSnap = await getDoc(presenteRef);
+        
+        let updateData = {
+          lastPaidAt: Date.now()
+        };
+
+        if (pSnap.exists()) {
+          const title = (pSnap.data().titulo || '').toLowerCase();
+          const isExclusivo = pSnap.data().isExclusivo || 
+                              title.includes('pedir') || 
+                              title.includes('padrinho') || 
+                              title.includes('buffet');
+          
+          // Apenas marca como vendido (esgotado) se for um dos itens exclusivos
+          if (isExclusivo) {
+             updateData.status = 'vendido';
+          }
+        }
+        
+        await updateDoc(presenteRef, updateData);
         
         console.log('Presente atualizado com sucesso no Firebase!');
       }

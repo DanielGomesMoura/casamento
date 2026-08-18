@@ -1015,6 +1015,7 @@ interface Presente {
   imagemUrl: string;
   isExclusivo?: boolean;
   status?: string;
+  lastPaidAt?: number;
 }
 
 function PresentesScreen() {
@@ -1022,6 +1023,7 @@ function PresentesScreen() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPresente, setSelectedPresente] = useState<Presente | null>(null);
+  const [openedAt, setOpenedAt] = useState(0);
 
   // Estados do PIX Dinâmico
   const [loadingPix, setLoadingPix] = useState(false);
@@ -1053,6 +1055,7 @@ function PresentesScreen() {
     setPixImage(null);
     setPixPayload(null);
     setPixError('');
+    setOpenedAt(Date.now());
 
     try {
       let nomeConvidado = new URLSearchParams(window.location.search).get('id');
@@ -1098,8 +1101,9 @@ function PresentesScreen() {
   };
 
   return (
-    <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
-      <div className="max-w-6xl mx-auto">
+    <>
+      <div className="pt-24 pb-20 px-4 min-h-screen bg-stone-50 animate-fade-in font-sans">
+        <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16 mt-8">
           <h1 className="font-serif text-5xl mb-4 text-stone-800">Lista de Presentes</h1>
           <p className="text-stone-600 max-w-2xl mx-auto">
@@ -1118,7 +1122,12 @@ function PresentesScreen() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {presentes.map(presente => {
-              const isVendido = presente.isExclusivo && presente.status === 'vendido';
+              const titleLower = (presente.titulo || '').toLowerCase();
+              const isExclusivo = presente.isExclusivo || 
+                                  titleLower.includes('pedir') || 
+                                  titleLower.includes('padrinho') || 
+                                  titleLower.includes('buffet');
+              const isVendido = isExclusivo && presente.status === 'vendido';
 
               return (
                 <div key={presente.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow relative">
@@ -1149,10 +1158,11 @@ function PresentesScreen() {
           </div>
         )}
       </div>
+    </div>
 
-      {/* Modal PIX */}
-      {modalOpen && selectedPresente && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    {/* Modal PIX */}
+    {modalOpen && selectedPresente && (
+      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 relative animate-fade-in shadow-2xl">
             <button
               onClick={() => setModalOpen(false)}
@@ -1161,7 +1171,10 @@ function PresentesScreen() {
               <XCircle size={24} />
             </button>
 
-            {presentes.find(p => p.id === selectedPresente.id)?.status === 'vendido' ? (
+            {(() => {
+              const currentP = presentes.find(p => p.id === selectedPresente.id);
+              const isPaidNow = currentP && currentP.lastPaidAt && currentP.lastPaidAt > openedAt;
+              return isPaidNow ? (
               <div className="text-center py-8">
                 <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
                   <CheckCircle2 className="text-green-500 w-12 h-12" />
@@ -1221,10 +1234,10 @@ function PresentesScreen() {
                   Cancelar
                 </button>
               </div>
-            )}
+            ) })()}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

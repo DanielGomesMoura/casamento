@@ -648,7 +648,7 @@ function HomeScreen({ conviteData, navigateTo }: { conviteData: ConviteData | nu
                 </div>
                 <div className="flex items-center justify-center text-stone-600">
                   <Clock className="mr-2" size={18} />
-                  <p className="text-sm">Início pontualmente às 18:00</p>
+                  <p className="text-sm">Início pontualmente às 19:00</p>
                 </div>
               </div>
               <div className="h-64 w-full bg-gray-200">
